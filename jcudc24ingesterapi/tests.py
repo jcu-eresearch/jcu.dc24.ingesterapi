@@ -5,17 +5,17 @@ from sqlalchemy.types import BOOLEAN
 import sys
 import tempfile
 
-from richdatacapture.ingesterapi.models.dataset import Dataset
-from richdatacapture.ingesterapi.models.locations import Location, Region
-from richdatacapture.ingesterapi.schemas.data_types import FileDataType
-from richdatacapture.ingesterapi.models.data_sources import PullDataSource, PushDataSource
-from richdatacapture.ingesterapi.models.data_entry import DataEntry
-from richdatacapture.ingesterapi.ingester_platform_api import IngesterPlatformAPI
-from richdatacapture.ingesterapi.authentication import CredentialsAuthentication
-from richdatacapture.ingesterapi.models.metadata import Metadata
-from richdatacapture.ingesterapi.schemas.metadata_schemas import QualityMetadataSchema, SampleRateMetadataSchema, NoteMetadataSchema, QualityMetadataSchema
-from richdatacapture.ingesterapi.models.sampling import RepeatSampling, PeriodicSampling
-from richdatacapture.ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
+from jcudc24ingesterapi.models.dataset import Dataset
+from jcudc24ingesterapi.models.locations import Location, Region
+from jcudc24ingesterapi.schemas.data_types import FileDataType
+from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
+from jcudc24ingesterapi.models.data_entry import DataEntry
+from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI
+from jcudc24ingesterapi.authentication import CredentialsAuthentication
+from jcudc24ingesterapi.models.metadata import Metadata
+from jcudc24ingesterapi.schemas.metadata_schemas import QualityMetadataSchema, SampleRateMetadataSchema, NoteMetadataSchema, QualityMetadataSchema
+from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling
+from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
 
 class TestIngesterModels(unittest.TestCase):
     def test_authentication(self):

@@ -3,3 +3,6 @@
 bin
 lib
 /include
+eggs
+develop-eggs
+parts

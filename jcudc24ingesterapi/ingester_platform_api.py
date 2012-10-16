@@ -1,7 +1,7 @@
 __author__ = 'Casey Bajema'
 import xmlrpclib
-from richdatacapture.ingesterapi.models.dataset import Dataset
-from richdatacapture.ingesterapi.models.locations import Location
+from jcudc24ingesterapi.models.dataset import Dataset
+from jcudc24ingesterapi.models.locations import Location
 
 CLASSES = {str(Location):"location"}
 CLASS_FACTORIES = {"location": Location}
@@ -187,7 +187,7 @@ class UnitOfWork(object):
         """Looks for an id in a collection of objects.
         
         This is an internal method used for checking if other operations are already registerd for this object.
-        >>> from richdatacapture.ingesterapi.models.dataset import Dataset
+        >>> from jcudc24ingesterapi.models.dataset import Dataset
         >>> col = []
         >>> ds = Dataset()
         >>> ds.id = 1
