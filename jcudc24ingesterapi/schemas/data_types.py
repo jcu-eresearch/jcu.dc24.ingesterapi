@@ -1,5 +1,3 @@
-from sqlalchemy.dialects.mysql.base import VARCHAR
-
 __author__ = 'Casey Bajema'
 
 # TODO: Add common data types (eg. temp, video, humidity, rain fall etc.)
@@ -25,5 +23,5 @@ class FileDataType(DataType):
     Ingesters that want to index additional data should add fields to this schema and provide
     a custom processing script to extract that data.
     """
-    mime_type = VARCHAR(100)   # eg. text/xml
-    file_handle = VARCHAR(500) # URL (eg. file://c:/test_file.txt)
+    mime_type = None  # eg. text/xml
+    file_handle = None # URL (eg. file://c:/test_file.txt)

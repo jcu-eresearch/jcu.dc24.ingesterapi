@@ -56,7 +56,7 @@ class TestIngesterModels(unittest.TestCase):
         pass
 
 
-class TestIngesterFunctionality(unittest.TestCase):
+class TestIngesterService(unittest.TestCase):
     """This set of tests checks that the CRUD functionality works as expected
     """
     def setUp(self):
@@ -65,7 +65,13 @@ class TestIngesterFunctionality(unittest.TestCase):
         self.cleanup_files = []
         
     def test_metadata_functionality(self):
-        pass
+        loc = Location(10.0, 11.0, "Test Site", 100, None)
+        loc = self.ingester_platform.post(loc)
+        
+        dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+        dataset1 = self.ingester_platform.post(dataset)
+        self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
+        self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
 
     def test_location_functionality(self):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
@@ -84,6 +90,27 @@ class TestIngesterFunctionality(unittest.TestCase):
 
     def test_processing_functionality(self):
         pass
+
+    def tearDown(self):
+        self.ingester_platform.reset()
+        
+class TestIngesterFunctionality(unittest.TestCase):
+    """This set of tests test the actual functioning of the service.
+    """
+    def setUp(self):
+        self.auth = CredentialsAuthentication("casey", "password")
+        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080", self.auth)
+        self.cleanup_files = []
+        
+    def test_pull_ingest_functionality(self):
+        loc = Location(10.0, 11.0, "Test Site", 100, None)
+        loc = self.ingester_platform.post(loc)
+        
+        dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"),
+                PeriodicSampling(10000))
+        dataset1 = self.ingester_platform.post(dataset)
+        self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
+        self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
 
     def tearDown(self):
         self.ingester_platform.reset()
