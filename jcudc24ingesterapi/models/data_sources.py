@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from sqlalchemy.dialects.mysql.base import VARCHAR, INTEGER, TEXT
 from richdatacapture.ingesterapi.models.sampling import _Sampling
 
@@ -14,6 +15,9 @@ class _DataSource():
     Data sources are known types that provide a known set of information but are unrelated to the data type.
     The ingester platform will need to implement data type specific ingesters for each data source.
     """
+    @abstractmethod
+    def get_name(self):
+        pass
 
 class DatasetDataSource(_DataSource):
     """
