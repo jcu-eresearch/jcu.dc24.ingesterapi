@@ -6,3 +6,4 @@ lib
 eggs
 develop-eggs
 parts
+*.iml
