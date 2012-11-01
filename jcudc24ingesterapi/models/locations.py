@@ -10,7 +10,7 @@ class Region(dict):
     def __init__(self, region_name, region_points, parent_regions = None, region_id = None):
         """
         :param region_name: A human recognisable string naming the region
-        :param region_points: An 2D array of latitude/longitude points ((lat, long), (lat, long),...), the
+        :param region_points: A 2D array of latitude/longitude points ((lat, long), (lat, long),...), the
                                 last point joins the first point to close the region.
         :param parent_regions: A region object containing the parent region.
         :return: The initialised region.

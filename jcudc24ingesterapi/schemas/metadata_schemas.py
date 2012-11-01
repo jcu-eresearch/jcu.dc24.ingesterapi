@@ -5,7 +5,7 @@ from jcudc24ingesterapi.models.sampling import _Sampling
 
 __author__ = 'Casey Bajema'
 
-class _MetadataSchema(dict):
+class MetadataSchema(dict):
     """
     Base class for all calibration schemas that provide a known type.
 
@@ -16,10 +16,10 @@ class _MetadataSchema(dict):
     (sub-classed from _CalibrationSchema) added to the same data_entry.  Sending a duplicate calibration
     will overwrite previous values.
     """
-    calibration_id = INTEGER()          # Primary ID
-    data_entry_id = ForeignKey("DataEntrySchema.data_entry_id")
+    metadata_id = INTEGER()          # Primary ID
+    foreign_object = None
 
-class QualityMetadataSchema(_MetadataSchema):
+class QualityMetadataSchema(MetadataSchema):
     """
     Quality and calibration data about data_entry, there is a many to 1 relationship between quality
     and data_entry respectively.
@@ -35,7 +35,7 @@ class QualityMetadataSchema(_MetadataSchema):
     description = VARCHAR(250)      # (Optional) Text based quality (eg. camera has a cracked lens) or further description of value
     value = DOUBLE()                # (Optional) A description
 
-class SampleRateMetadataSchema(_MetadataSchema):
+class SampleRateMetadataSchema(MetadataSchema):
     """
 
     """

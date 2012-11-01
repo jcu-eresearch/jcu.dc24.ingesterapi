@@ -1,4 +1,5 @@
 import datetime
+from sqlalchemy.dialects.mysql.base import DOUBLE
 import os
 import unittest
 from sqlalchemy.types import BOOLEAN
@@ -13,9 +14,185 @@ from jcudc24ingesterapi.models.data_entry import DataEntry
 from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
 from jcudc24ingesterapi.models.metadata import Metadata
-from jcudc24ingesterapi.schemas.metadata_schemas import QualityMetadataSchema, SampleRateMetadataSchema, NoteMetadataSchema, QualityMetadataSchema
-from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling
+from jcudc24ingesterapi.schemas.metadata_schemas import QualityMetadataSchema, SampleRateMetadataSchema, NoteMetadataSchema, QualityMetadataSchema, MetadataSchema
+from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling, CustomSampling
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
+
+
+class ProvisioningInterfaceTest(unittest.TestCase):
+    """
+    This test defines and checks that the Ingester API works the way the provisioning interface expects.
+    """
+    def setUp(self):
+        self.auth = CredentialsAuthentication("casey", "password")
+        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080", self.auth)
+        self.cleanup_files = []
+
+    def test_api_usage(self):
+#       User data that is created by filling out the provisioning interface workflow steps.
+        #   General
+        title = "Test project"
+        data_manager = "A Person"
+        project_lead = "Another Person"
+
+        #   Metadata
+        project_region = Region("Test Region", ((1, 1), (2, 2),(2,1), (1,1)))
+
+        #   Methods & Datasets
+        extended_file_schema = FileDataType()
+        extended_file_schema.temperature = DOUBLE()    # TODO: This is probably wrong - I'm not sure how it is being done now
+
+        loc1 = Location(10.0, 11.0, "Test Site", 100)
+        loc2 = Location(11.0, 11.0, "Test Site", 100)
+        loc3 = Location(12.0, 11.0, "Test Site", 100)
+
+
+        dataset1 = Dataset(None, FileDataType(), extended_file_schema)
+        dataset2 = Dataset(None, FileDataType(), PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+        dataset3 = Dataset(None, FileDataType(), PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
+
+        self.cleanup_files.push(dataset2.processing_script)
+        self.cleanup_files.push(dataset3.sampling.script)
+        self.cleanup_files.push(dataset3.processing_script)
+
+#       Provisioning admin accepts the submitted project
+        work = self.ingester_platform.createUnitOfWork()
+
+        project_region_id = work.post(project_region)    # Save the region
+
+        loc1.region = project_region_id                  # Set the datasets location to use the projects region
+        loc1_id = work.post(loc1)                        # Save the location
+        dataset1.location = loc1_id                            # Set the datasets location
+        dataset1_id = work.post(dataset1)                # Save the dataset
+
+        loc2.region = project_region_id
+        loc2_id = work.post(loc2)
+        dataset2.location = loc2_id
+        dataset2_id = work.post(dataset2)
+
+        loc3.region = project_region_id
+        loc3_id = work.post(loc3)
+        dataset3.location = loc3_id
+        dataset3_id = work.post(dataset3)
+
+        # TODO: Nigel - How would I know that it worked/failed?
+        if work.commit():
+            # TODO: Nigel - I can't see any way of getting the real id from the work
+            project_region.id = work.getRealId(project_region_id)
+
+            loc1.id = work.getRealId(loc1_id)
+            dataset1.id = work.getRealId(dataset1_id)
+            loc2.id = work.getRealId(loc2_id)
+            dataset2.id = work.getRealId(dataset2_id)
+            loc3.id = work.getRealId(loc3_id)
+            dataset3.id = work.getRealId(dataset3_id)
+
+        else:
+            assert(True, "Project creation failed")
+
+        # Region, location and dataset id's will be saved to the project within the provisioning system in some way
+
+
+#       User searches for datasets
+
+        # TODO: Nigel? - Define searching api
+        found_dataset_id = dataset1.id                  # The dataset that has an extended file schema
+
+#       User manually enters data
+        data_entry = DataEntry(found_dataset_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+        data_entry['temperature'] = 27.8                # Add the extended schema items
+        data_entry['mime_type'] = "text/xml"
+        data_entry['file_handle'] = "file://c:/test_file.txt"
+
+        try:
+            data_entry = self.ingester_platform.post(data_entry)
+            assert(data_entry.id is None, "Data Entry failed")
+        except:
+            assert(True, "Data Entry failed")
+
+#       User enters quality assurance metadata
+        entered_metadata = Metadata(data_entry.data_entry_id, QualityMetadataSchema())
+        entered_metadata.unit = "%"
+        entered_metadata.description = "Percent error"
+        entered_metadata.value = 0.98
+
+        try:
+            entered_metadata = self.ingester_platform.post(entered_metadata)
+            assert(entered_metadata.metadata_id is None, "Metadata failed")
+        except:
+            assert(True, "Metadata failed")
+
+#       User changes sampling rate
+        sampling_rate_changed = Metadata(data_entry.data_entry_id, SampleRateMetadataSchema())
+        sampling_rate_changed.change_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        sampling_rate_changed.sampling = CustomSampling("file://d:/sampling_scripts/awsome_sampling.py")
+
+        try:
+            sampling_rate_changed = self.ingester_platform.post(sampling_rate_changed)
+            assert(sampling_rate_changed.metadata_id is None, "Sampling rate change failed")
+        except:
+            assert(True, "Sampling rate change failed")
+
+#       User wants some random metadata specific to their project
+        random_metadata_schema =  MetadataSchema()
+        random_metadata_schema.random_field = DOUBLE()
+
+        random_metadata = Metadata(data_entry.data_entry_id, random_metadata_schema)
+        random_metadata.random_field = 1.5
+
+        try:
+            random_metadata = self.ingester_platform.post(random_metadata)
+            assert(random_metadata.metadata_id is None, "random_metadata failed")
+        except:
+            assert(True, "random_metadata failed")
+
+#       User changes the data source of the dataset
+        new_data_source = PullDataSource("http://test.com/new_data", "file_handle")
+        dataset1.data_source = new_data_source
+        try:
+            dataset1 = self.ingester_platform.post(dataset1)
+        except:
+            assert(True, "data_source change failed")
+
+#       External, 3rd party searches for data
+        # TODO: external 3rd parties should be able to use the api to get data without authentication
+        # TODO: I'm not sure exactly how this should work, but the search api could be open access (need spam limitations or something?)
+
+#       Project is disabled/finished
+        # TODO: Nigel - Create the disable method
+        try:
+            work = self.ingester_platform.createUnitOfWork()
+            work.disable(dataset1)
+            work.disable(dataset2)
+            work.disable(dataset3)
+            if not work.commit():
+                assert(True, "disable commit failed")
+        except:
+            assert(True, "disable failed")
+
+#       Project is obsolete and data should be deleted
+        try:
+            work = self.ingester_platform.createUnitOfWork()
+            work.delete(dataset1)
+            work.delete(dataset2)
+            work.delete(dataset3)
+            if not work.commit():
+                assert(True, "delete commit failed")
+        except:
+            assert(True, "delete failed")
+
+
+    def tearDown(self):
+        self.ingester_platform.reset()
+
+        for file in self.cleanup_files:
+            try:
+                os.remove(file)
+            except:
+                print "failed to remove file: " + file
+
+
+
 
 class TestIngesterModels(unittest.TestCase):
     def test_authentication(self):

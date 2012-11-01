@@ -80,7 +80,7 @@ class IngesterPlatformAPI(object):
         :param ingester_object: Insert a new record if the ID isn't set, if the ID is set update the existing record.
         :return: The object passed in with the ID field set.
         """
-        if ingester_object.id == None:
+        if ingester_object.id is None:
             return self.insert(ingester_object)
         else:
             return self.update(ingester_object)
