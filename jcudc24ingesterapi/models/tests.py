@@ -1,9 +1,6 @@
 import unittest
-import transaction
 
-from pyramid import testing
-
-from richdatacapture.ingesterapi.models.data_entry import DataEntry
+from jcudc24ingesterapi.models.data_entry import DataEntry
 
 class TestIngesterModels(unittest.TestCase):
     def test_metadata(self):

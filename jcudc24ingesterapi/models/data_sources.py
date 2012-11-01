@@ -1,6 +1,4 @@
-from abc import abstractmethod
-from sqlalchemy.dialects.mysql.base import VARCHAR, INTEGER, TEXT
-from richdatacapture.ingesterapi.models.sampling import _Sampling
+from jcudc24ingesterapi.models.sampling import _Sampling
 
 """
     Defines all possible data sources or in other words data input methods that can be provisioned.
@@ -8,16 +6,13 @@ from richdatacapture.ingesterapi.models.sampling import _Sampling
 
 __author__ = 'Casey Bajema'
 
-class _DataSource():
+class _DataSource(object):
     """
     Base data source class that does nothing beyond defining a known type.
 
     Data sources are known types that provide a known set of information but are unrelated to the data type.
     The ingester platform will need to implement data type specific ingesters for each data source.
     """
-    @abstractmethod
-    def get_name(self):
-        pass
 
 class DatasetDataSource(_DataSource):
     """
@@ -31,7 +26,13 @@ class PullDataSource(_DataSource):
     """
     A data source that polls a URI for data of the dataset's data type.
     """
-    pull_server = VARCHAR(250)
+    uri = None # Data source URI
+    def __init__(self, uri=None, field=None):
+        """Initialise the PullDataSource with a URI for the source file, and the field that 
+        the uri will be saved to.
+        """
+        self.uri = uri
+        self.field = field
 
 
 class PushDataSource(_DataSource):
@@ -51,8 +52,8 @@ class SOSDataSource(_DataSource):
     * Invalid data is dropped
     """ # TODO: Work out the exact implementation details
 
-    sensor_id = INTEGER()   # Need to check the sensor_id type
-    sensorml = TEXT()
+    sensor_id = None   # Need to check the sensor_id type
+    sensorml = None 
     pass
 
 class UploadDataSource(_DataSource):

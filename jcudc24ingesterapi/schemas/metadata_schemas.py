@@ -1,7 +1,7 @@
 from sqlalchemy.dialects.mysql.base import VARCHAR, DOUBLE, INTEGER, TEXT
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.types import DATETIME
-from richdatacapture.ingesterapi.models.sampling import _Sampling
+from jcudc24ingesterapi.models.sampling import _Sampling
 
 __author__ = 'Casey Bajema'
 

@@ -1,4 +1,4 @@
-from richdatacapture.ingesterapi.ingester_exceptions import UnknownParameterError
+from jcudc24ingesterapi.ingester_exceptions import UnknownParameterError
 
 __author__ = 'Casey Bajema'
 

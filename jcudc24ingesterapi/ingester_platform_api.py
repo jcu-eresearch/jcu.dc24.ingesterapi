@@ -1,18 +1,30 @@
 __author__ = 'Casey Bajema'
 import xmlrpclib
-from richdatacapture.ingesterapi.models.dataset import Dataset
-from richdatacapture.ingesterapi.models.locations import Location
+from jcudc24ingesterapi.models.dataset import Dataset
+from jcudc24ingesterapi.models.locations import Location
+from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling
+from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
 
-CLASSES = {str(Location):"location"}
-CLASS_FACTORIES = {"location": Location}
+CLASSES = {Location:"location", 
+           Dataset:"dataset",
+           PullDataSource:"pull_data_source",
+           PeriodicSampling:"periodic_sampling"}
+CLASS_FACTORIES = {"location": Location, 
+                   "dataset":Dataset,
+                   "pull_data_source":PullDataSource,
+                   "periodic_sampling":PeriodicSampling}
 
 def obj_to_dict(obj):
     """Maps an object of base class BaseManagementObject to a dict.
     """
-    if not CLASSES.has_key(str(obj.__class__)):
-        raise ValueError("This object class is not supported")
+    if not CLASSES.has_key(type(obj)):
+        raise ValueError("This object class is not supported: " + str(obj.__class__))
     ret = dict(obj.__dict__)
-    ret["class"] = CLASSES[str(obj.__class__)]
+    ret["class"] = CLASSES[type(obj)]
+    
+    for k in ret:
+        if type(ret[k]) not in (str, int, float, unicode, dict, type(None)):
+            ret[k] = obj_to_dict(ret[k])
     return ret
 
 def dict_to_obj(x):
@@ -68,7 +80,7 @@ class IngesterPlatformAPI(object):
         :param ingester_object: Insert a new record if the ID isn't set, if the ID is set update the existing record.
         :return: The object passed in with the ID field set.
         """
-        if ingester_object.id == None:
+        if ingester_object.id is None:
             return self.insert(ingester_object)
         else:
             return self.update(ingester_object)
@@ -187,7 +199,7 @@ class UnitOfWork(object):
         """Looks for an id in a collection of objects.
         
         This is an internal method used for checking if other operations are already registerd for this object.
-        >>> from richdatacapture.ingesterapi.models.dataset import Dataset
+        >>> from jcudc24ingesterapi.models.dataset import Dataset
         >>> col = []
         >>> ds = Dataset()
         >>> ds.id = 1

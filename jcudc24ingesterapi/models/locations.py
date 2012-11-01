@@ -25,7 +25,7 @@ class Location(dict):
     A 3D point on Earth.
     """
 
-    def __init__(self, latitude, longitude, location_name = None, elevation = None, region = None):
+    def __init__(self, latitude=None, longitude=None, location_name = None, elevation = None, region = None):
         """
         :param latitude: Double value indicating the latitude (WGS84 assumed, metadata should be attached otherwise)
         :param longitude: Double value representing the longitude (WGS84 assumed, metadata should be attached otherwise)
@@ -36,10 +36,9 @@ class Location(dict):
         :return: Initialised Location object.
         """
         self.id = None
-        self.location_name = location_name              # String
+        self.name = location_name              # String
         self.latitude = latitude                        # double
         self.longitude = longitude                      # double
         self.elevation = elevation                      # double
         self.region = region
-
 
