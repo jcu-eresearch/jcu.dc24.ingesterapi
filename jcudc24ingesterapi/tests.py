@@ -186,11 +186,11 @@ class ProvisioningInterfaceTest(unittest.TestCase):
     def tearDown(self):
         self.ingester_platform.reset()
 
-        for file in self.cleanup_files:
+        for f in self.cleanup_files:
             try:
-                os.remove(file)
+                os.remove(f)
             except:
-                print "failed to remove file: " + file
+                print "failed to remove file: " + f
 
 
 
@@ -234,15 +234,24 @@ class TestIngesterModels(unittest.TestCase):
         pass
 
 
-class TestIngesterService(unittest.TestCase):
+class TestIngesterPersistence(unittest.TestCase):
     """This set of tests checks that the CRUD functionality works as expected
     """
     def setUp(self):
         self.auth = CredentialsAuthentication("casey", "password")
         self.ingester_platform = IngesterPlatformAPI("http://localhost:8080", self.auth)
         self.cleanup_files = []
-        
-    def test_metadata_functionality(self):
+
+    def test_location_persistence(self):
+        loc = Location(10.0, 11.0, "Test Site", 100, None)
+        loc1 = self.ingester_platform.post(loc)
+        self.assertNotEqual(loc1.id, None, "ID should have been set")
+        self.assertEqual(loc.latitude, loc1.latitude, "latitude does not match")
+        self.assertEqual(loc.longitude, loc1.longitude, "longitude does not match")
+        self.assertEqual(loc.elevation, loc1.elevation, "elevation does not match")
+        self.assertEqual(loc.name, loc1.name, "name does not match")
+
+    def test_dataset_persistence(self):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         loc = self.ingester_platform.post(loc)
         self.assertIsNotNone(loc, "Location should not be none")
@@ -253,23 +262,28 @@ class TestIngesterService(unittest.TestCase):
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
 
-    def test_location_functionality(self):
+    def test_unit_of_work_persistence(self):
+        unit = self.ingester_platform.createUnitOfWork()
+        
         loc = Location(10.0, 11.0, "Test Site", 100, None)
-        loc1 = self.ingester_platform.post(loc)
-        self.assertNotEqual(loc1.id, None, "ID should have been set")
-        self.assertEqual(loc.latitude, loc1.latitude, "latitude does not match")
-        self.assertEqual(loc.longitude, loc1.longitude, "longitude does not match")
-        self.assertEqual(loc.elevation, loc1.elevation, "elevation does not match")
-        self.assertEqual(loc.name, loc1.name, "name does not match")
+        unit.insert(loc)
 
-    def test_manual_ingest_functionality(self):
-        pass
+        dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+        unit.insert(dataset)
+        
+        # Persist all the objects
+        unit.commit()
 
-    def test_sampling_functionality(self):
-        pass
-
-    def test_processing_functionality(self):
-        pass
+        self.assertIsNotNone(loc, "Location should not be none")
+        self.assertIsNotNone(loc.id, "Location should not be none")
+        self.assertGreater(loc.id, 0, "Location ID not real")
+        self.assertEqual(loc.name, "Test Site", "Location name doesn't match")
+        
+        self.assertIsNotNone(dataset, "dataset should not be none")
+        self.assertIsNotNone(dataset.id, "dataset should not be none")
+        self.assertGreater(dataset.id, 0, "dataset ID not real")
+        
+        
 
     def tearDown(self):
         self.ingester_platform.reset()

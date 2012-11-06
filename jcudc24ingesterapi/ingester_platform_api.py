@@ -112,24 +112,27 @@ class IngesterPlatformAPI(object):
         """
         pass
 
-    def get(self, ingester_object, ingester_object_range = None):
+    def commit(self, unit):
+        """Commit a unit of work
+        :param unit: Unit of work which is going to be committed
+        :return: No return
         """
-        Get object(s) using the passed parameters from ingester_object or the value ranges between ingester_object
-            and ingester_object_range, the returned type will be based on the ingester_object type.
-
-        Comparison of values to ranges will be provided using the default python >= and <= operators.
-
-        :param ingester_object: An ingester object with either the ID or any combination of other fields set
-        :param ingester_object_range: If the second object is set get all objects that have values between those
-                                set in both ingester_object and ingester_object_range
-        :return: :If ingester_object_range is set, return all objects of the same type that have values between
-                        those set in ingester_object and ingester_object_range.
-                    Otherwise, if the ingester_object ID field is set an object of the correct type that matches
-                        the ID will be returned.
-                    Or an array of all objects of the correct type that match the set fields.
-        """
-        pass
-
+        
+        unit_dto = {"delete":[],
+                    "update":[obj_to_dict(obj) for obj in unit._to_update],
+                    "insert":[obj_to_dict(obj) for obj in unit._to_insert]}
+        
+        results = self.server.commit(unit_dto)
+        lookup = {}
+        for result in results: lookup[result["correlationid"]] = dict_to_obj(result)
+        for obj in unit._to_update:
+            if obj.id not in lookup: continue
+            obj.__dict__ = lookup[obj.id].__dict__.copy()
+            del obj.correlationid
+        for obj in unit._to_insert:
+            if obj.id not in lookup: continue
+            obj.__dict__ = lookup[obj.id].__dict__.copy()
+            del obj.correlationid
 
     def enableDataset(self, dataset_id):
         """
@@ -202,15 +205,15 @@ class UnitOfWork(object):
         if ingester_object.id != None:
             raise ValueError("Expected no ID set")
         ingester_object.id = self._next
-        self._to_insert(ingester_object)
+        self._to_insert.append(ingester_object)
         self._next = self._next - 1
         return ingester_object.id
 
     def update(self, ingester_object):
-        self._to_update(ingester_object)
+        self._to_update.append(ingester_object)
 
     def delete(self, ingester_object):
-        self._to_delete(ingester_object)
+        self._to_delete.append(ingester_object)
     
     def commit(self):
         """Commit this unit of work using the original service instance.
