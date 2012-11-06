@@ -289,6 +289,11 @@ class TestIngesterFunctionality(unittest.TestCase):
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
 
+        self.ingester_platform.disable(dataset1.id)
+
+        dataset1a = self.ingester_platform.getDataset(dataset1.id)
+        self.assertEquals(dataset1a.enabled, False)
+
     def tearDown(self):
         self.ingester_platform.reset()
 
