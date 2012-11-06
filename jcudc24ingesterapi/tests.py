@@ -40,7 +40,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
         #   Methods & Datasets
         extended_file_schema = FileDataType()
-        extended_file_schema.temperature = DOUBLE()    # TODO: This is probably wrong - I'm not sure how it is being done now
+        extended_file_schema.add_attr("Temperature", DOUBLE())    # TODO: Update Double to correct type once defined
 
         loc1 = Location(10.0, 11.0, "Test Site", 100)
         loc2 = Location(11.0, 11.0, "Test Site", 100)
@@ -58,36 +58,37 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 #       Provisioning admin accepts the submitted project
         work = self.ingester_platform.createUnitOfWork()
 
-        project_region_id = work.post(project_region)    # Save the region
+        work.post(project_region)    # Save the region
 
         loc1.region = project_region_id                  # Set the datasets location to use the projects region
-        loc1_id = work.post(loc1)                        # Save the location
+        work.post(loc1)                        # Save the location
         dataset1.location = loc1_id                            # Set the datasets location
-        dataset1_id = work.post(dataset1)                # Save the dataset
+        work.post(dataset1)                # Save the dataset
 
         loc2.region = project_region_id
-        loc2_id = work.post(loc2)
+        work.post(loc2)
         dataset2.location = loc2_id
-        dataset2_id = work.post(dataset2)
+        work.post(dataset2)
 
         loc3.region = project_region_id
-        loc3_id = work.post(loc3)
+        work.post(loc3)
         dataset3.location = loc3_id
-        dataset3_id = work.post(dataset3)
+        work.post(dataset3)
 
-        # TODO: Nigel - How would I know that it worked/failed?
-        if work.commit():
-            # TODO: Nigel - I can't see any way of getting the real id from the work
-            project_region.id = work.getRealId(project_region_id)
+        try:
+            work.commit()
 
-            loc1.id = work.getRealId(loc1_id)
-            dataset1.id = work.getRealId(dataset1_id)
-            loc2.id = work.getRealId(loc2_id)
-            dataset2.id = work.getRealId(dataset2_id)
-            loc3.id = work.getRealId(loc3_id)
-            dataset3.id = work.getRealId(dataset3_id)
+#            # No need to retrieve the id's any more
+#            project_region.id = work.getRealId(project_region_id)
+#
+#            loc1.id = work.getRealId(loc1_id)
+#            dataset1.id = work.getRealId(dataset1_id)
+#            loc2.id = work.getRealId(loc2_id)
+#            dataset2.id = work.getRealId(dataset2_id)
+#            loc3.id = work.getRealId(loc3_id)
+#            dataset3.id = work.getRealId(dataset3_id)
 
-        else:
+        except:
             assert(True, "Project creation failed")
 
         # Region, location and dataset id's will be saved to the project within the provisioning system in some way
@@ -99,7 +100,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         found_dataset_id = dataset1.id                  # The dataset that has an extended file schema
 
 #       User manually enters data
-        data_entry = DataEntry(found_dataset_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+        data_entry = DataEntry(found_dataset_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M")) # TODO: Timestamp is probably wrong
         data_entry['temperature'] = 27.8                # Add the extended schema items
         data_entry['mime_type'] = "text/xml"
         data_entry['file_handle'] = "file://c:/test_file.txt"
@@ -111,10 +112,10 @@ class ProvisioningInterfaceTest(unittest.TestCase):
             assert(True, "Data Entry failed")
 
 #       User enters quality assurance metadata
-        entered_metadata = Metadata(data_entry.data_entry_id, QualityMetadataSchema())
-        entered_metadata.unit = "%"
-        entered_metadata.description = "Percent error"
-        entered_metadata.value = 0.98
+        entered_metadata = Metadata(data_entry.data_entry_id, type(data_entry), QualityMetadataSchema())
+        entered_metadata['unit'] = "%"
+        entered_metadata['description'] = "Percent error"
+        entered_metadata['value'] = 0.98
 
         try:
             entered_metadata = self.ingester_platform.post(entered_metadata)
@@ -123,7 +124,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
             assert(True, "Metadata failed")
 
 #       User changes sampling rate
-        sampling_rate_changed = Metadata(data_entry.data_entry_id, SampleRateMetadataSchema())
+        sampling_rate_changed = Metadata(dataset1.id, type(dataset1), SampleRateMetadataSchema())
         sampling_rate_changed.change_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         sampling_rate_changed.sampling = CustomSampling("file://d:/sampling_scripts/awsome_sampling.py")
 
@@ -135,9 +136,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
 #       User wants some random metadata specific to their project
         random_metadata_schema =  MetadataSchema()
-        random_metadata_schema.random_field = DOUBLE()
+        random_metadata_schema.add_attr('random_field', DOUBLE()) # TODO: Replace DOUBLE with the correct data type
 
-        random_metadata = Metadata(data_entry.data_entry_id, random_metadata_schema)
+        random_metadata = Metadata(data_entry.data_entry_id, type(data_entry), random_metadata_schema)
         random_metadata.random_field = 1.5
 
         try:
