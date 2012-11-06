@@ -1,5 +1,3 @@
-from sqlalchemy.schema import Table
-
 __author__ = 'Casey Bajema'
 
 
@@ -17,3 +15,5 @@ class Dataset(object):
         self.processing_script = processing_script      # handle to a file containing a python script, the script can access the data_entry through self.data_entry
         self.redbox_link = redbox_link                  # URL to the ReDBox collection.
         self.sampling = sampling
+        self.enabled = False
+        

@@ -245,9 +245,11 @@ class TestIngesterService(unittest.TestCase):
     def test_metadata_functionality(self):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         loc = self.ingester_platform.post(loc)
-        
+        self.assertIsNotNone(loc, "Location should not be none")
+        self.assertIsNotNone(loc.id, "Location should not be none")
         dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
         dataset1 = self.ingester_platform.post(dataset)
+        self.assertIsNotNone(dataset1, "Dataset should not be none")
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
 
@@ -289,8 +291,8 @@ class TestIngesterFunctionality(unittest.TestCase):
         dataset1 = self.ingester_platform.post(dataset)
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
-
-        self.ingester_platform.disable(dataset1.id)
+        
+        self.ingester_platform.disableDataset(dataset1.id)
 
         dataset1a = self.ingester_platform.getDataset(dataset1.id)
         self.assertEquals(dataset1a.enabled, False)

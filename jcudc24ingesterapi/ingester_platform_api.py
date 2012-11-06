@@ -23,7 +23,7 @@ def obj_to_dict(obj):
     ret["class"] = CLASSES[type(obj)]
     
     for k in ret:
-        if type(ret[k]) not in (str, int, float, unicode, dict, type(None)):
+        if type(ret[k]) not in (str, int, float, unicode, dict, bool, type(None)):
             ret[k] = obj_to_dict(ret[k])
     return ret
 
@@ -130,7 +130,18 @@ class IngesterPlatformAPI(object):
         """
         pass
 
-    def get_ingester_logs(self, dataset_id):
+
+    def enableDataset(self, dataset_id):
+        """
+        """
+        return self.server.enableDataset(dataset_id)
+    
+    def disableDataset(self, dataset_id):
+        """
+        """
+        return self.server.disableDataset(dataset_id)
+
+    def getIngesterLogs(self, dataset_id):
         """
         Get all ingester logs for a single dataset.
 
@@ -138,6 +149,17 @@ class IngesterPlatformAPI(object):
         :return: an array of file handles for all log files for that dataset.
         """
         pass
+    
+    def getLocation(self, loc_id):
+        """
+        """
+        return dict_to_obj(self.server.getLocation(loc_id))
+    
+
+    def getDataset(self, ds_id):
+        """
+        """
+        return dict_to_obj(self.server.getDataset(ds_id))
     
     def reset(self):
         """Resets the service
