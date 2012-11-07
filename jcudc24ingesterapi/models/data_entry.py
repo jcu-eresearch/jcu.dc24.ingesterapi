@@ -12,10 +12,10 @@ class DataEntry(dict):
     The kwargs parameters must conform to the data_type schema in the dataset or an exception will be thrown on initialisation.
     """
 
-    def __init__(self, dataset=None, datetime=None, data_entry_id = None, **kwargs):
+    def __init__(self, dataset=None, timestamp=None, data_entry_id = None, **kwargs):
         self.data_entry_id = data_entry_id
         self.dataset = dataset
-        self.datetime = datetime
+        self.timestamp = timestamp
 
         # Push the kwargs to fields
         for key in data_type_schema.keys():

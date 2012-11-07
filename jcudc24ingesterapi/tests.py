@@ -1,23 +1,21 @@
 import datetime
-from sqlalchemy.dialects.mysql.base import DOUBLE
 import os
 import unittest
-from sqlalchemy.types import BOOLEAN
 import sys
 import tempfile
 
 from jcudc24ingesterapi.models.dataset import Dataset
 from jcudc24ingesterapi.models.locations import Location, Region
-from jcudc24ingesterapi.schemas.data_types import FileDataType
+from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
 from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
 from jcudc24ingesterapi.models.data_entry import DataEntry
 from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
-from jcudc24ingesterapi.models.metadata import Metadata
-from jcudc24ingesterapi.schemas.metadata_schemas import QualityMetadataSchema, SampleRateMetadataSchema, NoteMetadataSchema, QualityMetadataSchema, MetadataSchema
+from jcudc24ingesterapi.models.metadata import MetadataEntry
+from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
 from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling, CustomSampling
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
-
+from jcudc24ingesterapi.schemas.data_entry_schemas import DataEntrySchema
 
 class ProvisioningInterfaceTest(unittest.TestCase):
     """
@@ -39,17 +37,23 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         project_region = Region("Test Region", ((1, 1), (2, 2),(2,1), (1,1)))
 
         #   Methods & Datasets
-        extended_file_schema = FileDataType()
-        extended_file_schema.add_attr("Temperature", DOUBLE())    # TODO: Update Double to correct type once defined
+        temperature_schema = DataEntrySchema()
+        temperature_schema.addAttr("file", FileDataType())
+        temperature_schema.addAttr("Temperature", Double())   
+        temperature_schema = self.ingester_platform.post(temperature_schema)
+        
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
 
         loc1 = Location(10.0, 11.0, "Test Site", 100)
         loc2 = Location(11.0, 11.0, "Test Site", 100)
         loc3 = Location(12.0, 11.0, "Test Site", 100)
 
 
-        dataset1 = Dataset(None, FileDataType(), extended_file_schema)
-        dataset2 = Dataset(None, FileDataType(), PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
-        dataset3 = Dataset(None, FileDataType(), PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
+        dataset1 = Dataset(None, temperature_schema)
+        dataset2 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+        dataset3 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
 
         self.cleanup_files.push(dataset2.processing_script)
         self.cleanup_files.push(dataset3.sampling.script)
@@ -100,7 +104,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         found_dataset_id = dataset1.id                  # The dataset that has an extended file schema
 
 #       User manually enters data
-        data_entry = DataEntry(found_dataset_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M")) # TODO: Timestamp is probably wrong
+        data_entry = DataEntry(found_dataset_id, datetime.datetime.now())
         data_entry['temperature'] = 27.8                # Add the extended schema items
         data_entry['mime_type'] = "text/xml"
         data_entry['file_handle'] = "file://c:/test_file.txt"
@@ -112,7 +116,13 @@ class ProvisioningInterfaceTest(unittest.TestCase):
             assert(True, "Data Entry failed")
 
 #       User enters quality assurance metadata
-        entered_metadata = Metadata(data_entry.data_entry_id, type(data_entry), QualityMetadataSchema())
+        quality_metadata_schema = DatasetMetadataSchema()
+        quality_metadata_schema.addAttr("unit", String())
+        quality_metadata_schema.addAttr("description", String())
+        quality_metadata_schema.addAttr("value", Double())
+        quality_metadata_schema = self.ingester_platform.post(quality_metadata_schema)
+        
+        entered_metadata = MetadataEntry(data_entry.data_entry_id, quality_metadata_schema)
         entered_metadata['unit'] = "%"
         entered_metadata['description'] = "Percent error"
         entered_metadata['value'] = 0.98
@@ -124,19 +134,20 @@ class ProvisioningInterfaceTest(unittest.TestCase):
             assert(True, "Metadata failed")
 
 #       User changes sampling rate
-        sampling_rate_changed = Metadata(dataset1.id, type(dataset1), SampleRateMetadataSchema())
-        sampling_rate_changed.change_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-        sampling_rate_changed.sampling = CustomSampling("file://d:/sampling_scripts/awsome_sampling.py")
-
-        try:
-            sampling_rate_changed = self.ingester_platform.post(sampling_rate_changed)
-            assert(sampling_rate_changed.metadata_id is None, "Sampling rate change failed")
-        except:
-            assert(True, "Sampling rate change failed")
+# FIXME: This test is going to be changed to be done by editing the dataset
+#        sampling_rate_changed = Metadata(dataset1.id, type(dataset1), SampleRateMetadataSchema())
+#        sampling_rate_changed.change_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+#        sampling_rate_changed.sampling = CustomSampling("file://d:/sampling_scripts/awsome_sampling.py")
+#
+#        try:
+#            sampling_rate_changed = self.ingester_platform.post(sampling_rate_changed)
+#            assert(sampling_rate_changed.metadata_id is None, "Sampling rate change failed")
+#        except:
+#            assert(True, "Sampling rate change failed")
 
 #       User wants some random metadata specific to their project
-        random_metadata_schema =  MetadataSchema()
-        random_metadata_schema.add_attr('random_field', DOUBLE()) # TODO: Replace DOUBLE with the correct data type
+        random_metadata_schema =  DataEntryMetadataSchema()
+        random_metadata_schema.addAttr('random_field', Double())
 
         random_metadata = Metadata(data_entry.data_entry_id, type(data_entry), random_metadata_schema)
         random_metadata.random_field = 1.5
@@ -282,8 +293,6 @@ class TestIngesterPersistence(unittest.TestCase):
         self.assertIsNotNone(dataset, "dataset should not be none")
         self.assertIsNotNone(dataset.id, "dataset should not be none")
         self.assertGreater(dataset.id, 0, "dataset ID not real")
-        
-        
 
     def tearDown(self):
         self.ingester_platform.reset()

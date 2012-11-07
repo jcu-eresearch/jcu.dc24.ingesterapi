@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 __author__ = 'Casey Bajema'
 
+
 class _Sampling(dict):
     """
     Base sampling object that defines the type.

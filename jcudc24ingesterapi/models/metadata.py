@@ -2,7 +2,7 @@ from jcudc24ingesterapi.ingester_exceptions import UnknownParameterError
 
 __author__ = 'Casey Bajema'
 
-class Metadata(dict):
+class MetadataEntry(dict):
     """
     Metadata class that provides further information about a single object, this could be a data_entry,
     dataset or any other stored object.

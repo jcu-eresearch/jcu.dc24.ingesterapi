@@ -4,7 +4,7 @@ from jcudc24ingesterapi.schemas import Schema
 
 __author__ = 'Casey Bajema'
 
-class DataEntryMetadataSchema(Schema):
+class DataEntrySchema(Schema):
     """
     Base class for all calibration schemas that provide a known type.
 
@@ -15,7 +15,4 @@ class DataEntryMetadataSchema(Schema):
     (sub-classed from _CalibrationSchema) added to the same data_entry.  Sending a duplicate calibration
     will overwrite previous values.
     """
-    pass
-
-class DatasetMetadataSchema(Schema):
     pass

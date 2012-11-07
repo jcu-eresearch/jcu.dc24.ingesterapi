@@ -2,7 +2,7 @@ __author__ = 'Casey Bajema'
 
 # TODO: Add common data types (eg. temp, video, humidity, rain fall etc.)
 
-class DataType(dict):
+class DataType(object):
     """
     Base data type schema defines an empty dictionary that can have fields added to it dynamically,
     these fields will then be used by the ingester platform to setup the required table.
@@ -25,3 +25,15 @@ class FileDataType(DataType):
     """
     mime_type = None  # eg. text/xml
     file_handle = None # URL (eg. file://c:/test_file.txt)
+
+class String(DataType):
+    pass
+
+class Integer(DataType):
+    pass
+
+class Double(DataType):
+    pass
+
+class DateTime(DataType):
+    pass
