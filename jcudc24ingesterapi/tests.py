@@ -267,11 +267,16 @@ class TestIngesterPersistence(unittest.TestCase):
         loc = self.ingester_platform.post(loc)
         self.assertIsNotNone(loc, "Location should not be none")
         self.assertIsNotNone(loc.id, "Location should not be none")
-        dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
+        
+        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
         dataset1 = self.ingester_platform.post(dataset)
         self.assertIsNotNone(dataset1, "Dataset should not be none")
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
-        self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
+        self.assertEquals(dataset1.schema, dataset.schema, "schema does not match %d!=%d"%(dataset1.schema, dataset.schema))
 
     def test_unit_of_work_persistence(self):
         unit = self.ingester_platform.createUnitOfWork()
@@ -279,7 +284,11 @@ class TestIngesterPersistence(unittest.TestCase):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         unit.insert(loc)
 
-        dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
+
+        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
         unit.insert(dataset)
         
         # Persist all the objects
@@ -309,7 +318,11 @@ class TestIngesterFunctionality(unittest.TestCase):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         loc = self.ingester_platform.post(loc)
         
-        dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"),
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
+        
+        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"),
                 PeriodicSampling(10000))
         dataset1 = self.ingester_platform.post(dataset)
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
@@ -433,6 +446,9 @@ class TestIngesterFunctionality(unittest.TestCase):
 #                    os.remove(f_name)
 #                except:
 #                    print "Exception: ", str(sys.exc_info())
+
+class TestMarshaller(unittest.TestCase):
+    pass
 
 if __name__ == '__main__':
     unittest.main()

@@ -23,17 +23,18 @@ class FileDataType(DataType):
     Ingesters that want to index additional data should add fields to this schema and provide
     a custom processing script to extract that data.
     """
+    __xmlrpc_class__ = "file"
     mime_type = None  # eg. text/xml
     file_handle = None # URL (eg. file://c:/test_file.txt)
 
 class String(DataType):
-    pass
+    __xmlrpc_class__ = "string"
 
 class Integer(DataType):
-    pass
+    __xmlrpc_class__ = "integer"
 
 class Double(DataType):
-    pass
+    __xmlrpc_class__ = "double"
 
 class DateTime(DataType):
-    pass
+    __xmlrpc_class__ = "datetime"

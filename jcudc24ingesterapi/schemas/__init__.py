@@ -13,6 +13,7 @@ class Schema(object):
     (sub-classed from _CalibrationSchema) added to the same data_entry.  Sending a duplicate calibration
     will overwrite previous values.
     """
+    id = None
     def addAttr(self, name, data_type):
         if not isinstance(data_type, DataType):
             raise ValueError("Not a subclass of DataType")

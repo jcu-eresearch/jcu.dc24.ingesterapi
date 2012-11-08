@@ -1,42 +1,71 @@
 __author__ = 'Casey Bajema'
 import xmlrpclib
-from jcudc24ingesterapi.models.dataset import Dataset
-from jcudc24ingesterapi.models.locations import Location
-from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling
-from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
+import jcudc24ingesterapi.models.dataset
+import jcudc24ingesterapi.models.locations
+import jcudc24ingesterapi.models.sampling
+import jcudc24ingesterapi.models.data_sources
+import jcudc24ingesterapi.schemas.metadata_schemas
+import jcudc24ingesterapi.schemas.data_entry_schemas
+import jcudc24ingesterapi.schemas.data_types
 
-CLASSES = {Location:"location", 
-           Dataset:"dataset",
-           PullDataSource:"pull_data_source",
-           PeriodicSampling:"periodic_sampling"}
-CLASS_FACTORIES = {"location": Location, 
-                   "dataset":Dataset,
-                   "pull_data_source":PullDataSource,
-                   "periodic_sampling":PeriodicSampling}
-
-def obj_to_dict(obj):
-    """Maps an object of base class BaseManagementObject to a dict.
+class Marshaller(object):
+    """A Marshaller object is responsible for converting between real objects
+    and dicts. This is used as a helper for the XMLRPC service.
     """
-    if not CLASSES.has_key(type(obj)):
-        raise ValueError("This object class is not supported: " + str(obj.__class__))
-    ret = dict(obj.__dict__)
-    ret["class"] = CLASSES[type(obj)]
-    
-    for k in ret:
-        if type(ret[k]) not in (str, int, float, unicode, dict, bool, type(None)):
-            ret[k] = obj_to_dict(ret[k])
-    return ret
+    def __init__(self):
+        self._classes = {}
+        self._class_factories = {}
 
-def dict_to_obj(x):
-    """Maps a dict back to an object, created based on the 'class' element.
-    """
-    if not x.has_key("class"):
-        raise ValueError("There is no class element")
-    obj = CLASS_FACTORIES[x["class"]]()
-    for k in x:
-        if k == "class": continue
-        setattr(obj, k, x[k])
-    return obj
+        self.scanPackage(jcudc24ingesterapi.models.locations)
+        self.scanPackage(jcudc24ingesterapi.models.dataset)
+        self.scanPackage(jcudc24ingesterapi.models.sampling)
+        self.scanPackage(jcudc24ingesterapi.models.data_sources)
+        self.scanPackage(jcudc24ingesterapi.schemas.metadata_schemas)
+        self.scanPackage(jcudc24ingesterapi.schemas.data_entry_schemas)
+        self.scanPackage(jcudc24ingesterapi.schemas.data_types)
+        
+    def scanPackage(self, pkg):
+        """Scan through the given package and find classes that are eligable for 
+        marshalling."""
+        for cls in dir(pkg):
+            cls = getattr(pkg, cls)
+            if isinstance(cls, type) and hasattr(cls, "__xmlrpc_class__"):
+                self._classes[cls] = cls.__xmlrpc_class__
+                self._class_factories[cls.__xmlrpc_class__] = cls
+
+    def obj_to_dict(self, obj):
+        """Maps an object of base class BaseManagementObject to a dict.
+        """
+        if not self._classes.has_key(type(obj)):
+            raise ValueError("This object class is not supported: " + str(obj.__class__))
+        ret = {}
+        if isinstance(obj, jcudc24ingesterapi.schemas.Schema):
+            ret["attributes"] = {}
+            for k in obj.__dict__:
+                ret["attributes"][k] = self._classes[type(obj.__dict__[k])]
+        else:
+            ret = dict(obj.__dict__)
+            for k in ret:
+                if type(ret[k]) not in (str, int, float, unicode, dict, bool, type(None)):
+                    ret[k] = self.obj_to_dict(ret[k])
+        ret["class"] = self._classes[type(obj)]
+        
+        return ret
+
+    def dict_to_obj(self, x):
+        """Maps a dict back to an object, created based on the 'class' element.
+        """
+        if not x.has_key("class"):
+            raise ValueError("There is no class element")
+        obj = self._class_factories[x["class"]]()
+        for k in x:
+            if k == "class": continue
+            elif k == "attributes" and x["class"].endswith("_schema"):
+                for k2 in x["attributes"]:
+                    setattr(obj, k2, self._class_factories[x["attributes"][k2]]())
+            else:
+                setattr(obj, k, x[k])
+        return obj
 
 class IngesterPlatformAPI(object):
     """
@@ -67,6 +96,7 @@ class IngesterPlatformAPI(object):
             raise ValueError("Invalid server URL specified")
         self.server = xmlrpclib.ServerProxy(service_url, allow_none=True)
         self.auth = auth
+        self._marshaller = Marshaller()
 
     def ping(self):
         """A simple diagnotic method which should return "PONG"
@@ -92,7 +122,7 @@ class IngesterPlatformAPI(object):
         :param ingester_object: If the objects ID is set an exception will be thrown.
         :return: The object passed in with the ID field set.
         """
-        return dict_to_obj(self.server.insert(obj_to_dict(ingester_object)))
+        return self._marshaller.dict_to_obj(self.server.insert(self._marshaller.obj_to_dict(ingester_object)))
 
     def update(self, ingester_object):
         """
@@ -119,12 +149,12 @@ class IngesterPlatformAPI(object):
         """
         
         unit_dto = {"delete":[],
-                    "update":[obj_to_dict(obj) for obj in unit._to_update],
-                    "insert":[obj_to_dict(obj) for obj in unit._to_insert]}
+                    "update":[self._marshaller.obj_to_dict(obj) for obj in unit._to_update],
+                    "insert":[self._marshaller.obj_to_dict(obj) for obj in unit._to_insert]}
         
         results = self.server.commit(unit_dto)
         lookup = {}
-        for result in results: lookup[result["correlationid"]] = dict_to_obj(result)
+        for result in results: lookup[result["correlationid"]] = self._marshaller.dict_to_obj(result)
         for obj in unit._to_update:
             if obj.id not in lookup: continue
             obj.__dict__ = lookup[obj.id].__dict__.copy()
@@ -156,13 +186,13 @@ class IngesterPlatformAPI(object):
     def getLocation(self, loc_id):
         """
         """
-        return dict_to_obj(self.server.getLocation(loc_id))
+        return self._marshaller.dict_to_obj(self.server.getLocation(loc_id))
     
 
     def getDataset(self, ds_id):
         """
         """
-        return dict_to_obj(self.server.getDataset(ds_id))
+        return self._marshaller.dict_to_obj(self.server.getDataset(ds_id))
     
     def reset(self):
         """Resets the service

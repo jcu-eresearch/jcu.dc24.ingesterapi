@@ -15,7 +15,7 @@ class DataEntryMetadataSchema(Schema):
     (sub-classed from _CalibrationSchema) added to the same data_entry.  Sending a duplicate calibration
     will overwrite previous values.
     """
-    pass
+    __xmlrpc_class__ = "data_entry_metadata_schema"
 
 class DatasetMetadataSchema(Schema):
-    pass
+    __xmlrpc_class__ = "dataset_metadata_schema"

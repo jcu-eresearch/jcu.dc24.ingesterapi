@@ -15,4 +15,4 @@ class DataEntrySchema(Schema):
     (sub-classed from _CalibrationSchema) added to the same data_entry.  Sending a duplicate calibration
     will overwrite previous values.
     """
-    pass
+    __xmlrpc_class__ = "data_entry_schema"

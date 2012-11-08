@@ -24,7 +24,8 @@ class Location(dict):
     """
     A 3D point on Earth.
     """
-
+    __xmlrpc_class__ = "location"
+    
     def __init__(self, latitude=None, longitude=None, location_name = None, elevation = None, region = None):
         """
         :param latitude: Double value indicating the latitude (WGS84 assumed, metadata should be attached otherwise)

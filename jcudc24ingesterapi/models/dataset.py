@@ -6,7 +6,7 @@ class Dataset(object):
     Represents a single dataset and contains the information required to ingest the data as well as location
     metadata.
     """
-
+    __xmlrpc_class__ = "dataset"
     def __init__(self, location = None, schema = None, data_source = None, sampling=None, processing_script = None, redbox_link = None):
         self.id = None
         self.location = location

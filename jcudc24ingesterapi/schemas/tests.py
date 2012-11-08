@@ -1,5 +1,5 @@
 import unittest
-from jcudc24ingesterapi.schemas.metadata_schemas import MetadataSchema
+from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema
 from jcudc24ingesterapi.schemas.data_types import *
 
 class TestSchemas(unittest.TestCase):
@@ -7,11 +7,11 @@ class TestSchemas(unittest.TestCase):
         """Test that the schema creation APIs properly validate the schemas
         as they are constructed.
         """
-        good_schema = MetadataSchema()
+        good_schema = DataEntryMetadataSchema()
         good_schema.addAttr("attr1", Double())
         good_schema.addAttr("attr2", String())
         
-        bad_schema = MetadataSchema()
+        bad_schema = DataEntryMetadataSchema()
         self.assertRaises(ValueError, bad_schema.addAttr, "attr2", str)        
 
     def test_data_types(self):

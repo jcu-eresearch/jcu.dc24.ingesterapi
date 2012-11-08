@@ -41,7 +41,7 @@ class CustomSampling(_Sampling):
     def sample_now(self, datetime):
         self.datetime = datetime
 
-        file = open(script, 'r')
+        file = open(self.script, 'r')
 
         eval(file.read(self.MAX_SCRIPT_SIZE), poll_rate=1)
 
@@ -53,7 +53,7 @@ class RepeatSampling(_Sampling):
     Sample based on a map of datetime/repeat rate pairs allowing the user to set an unlimited number of
     repeating times to sample on.
     """
-
+    __xmlrpc_class__ = "repeat_sampling"
     # Repeat rates
     microsecond, millisecond, second, minute, hour, day, week, month, year = range(9)
 
@@ -72,12 +72,12 @@ class PeriodicSampling(_Sampling):
     """
     Sample at a set rate in milliseconds
     """
-
+    __xmlrpc_class__ = "periodic_sampling"
     def __init__(self, rate):
         self.rate = rate
 
     def sample_now(self, datetime):
-        if self.last_sample + rate >= datetime:
+        if self.last_sample + self.rate >= datetime:
             self.last_sample = datetime
             return True
         return False
