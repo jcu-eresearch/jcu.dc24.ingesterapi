@@ -55,6 +55,8 @@ class Marshaller(object):
     def dict_to_obj(self, x):
         """Maps a dict back to an object, created based on the 'class' element.
         """
+        if isinstance(x, list):
+            return [self.dict_to_obj(obj) for obj in x]
         if not x.has_key("class"):
             raise ValueError("There is no class element")
         obj = self._class_factories[x["class"]]()
@@ -198,6 +200,11 @@ class IngesterPlatformAPI(object):
         """Resets the service
         """
         self.server.reset()
+
+    def findDatasets(self, **kwargs):
+        """Search for datasets
+        """
+        return self._marshaller.dict_to_obj(self.server.findDatasets(kwargs))
         
     def createUnitOfWork(self):
         """Creates a unit of work object that can be used to create transactional consistent set of operations

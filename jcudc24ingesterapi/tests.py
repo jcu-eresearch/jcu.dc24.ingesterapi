@@ -278,6 +278,13 @@ class TestIngesterPersistence(unittest.TestCase):
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match %d!=%d"%(dataset1.schema, dataset.schema))
 
+        datasets = self.ingester_platform.findDatasets()
+        self.assertEquals(1, len(datasets))
+
+        datasets = self.ingester_platform.findDatasets(location=loc.id)
+        self.assertEquals(1, len(datasets))
+
+
     def test_unit_of_work_persistence(self):
         unit = self.ingester_platform.createUnitOfWork()
         
