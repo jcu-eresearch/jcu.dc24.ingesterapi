@@ -46,7 +46,7 @@ class Marshaller(object):
         else:
             ret = dict(obj.__dict__)
             for k in ret:
-                if type(ret[k]) not in (str, int, float, unicode, dict, bool, type(None)):
+                if type(ret[k]) not in (str, int, float, unicode, dict, bool, type(None), tuple):
                     ret[k] = self.obj_to_dict(ret[k])
         ret["class"] = self._classes[type(obj)]
         
@@ -59,7 +59,10 @@ class Marshaller(object):
             return [self.dict_to_obj(obj) for obj in x]
         if not x.has_key("class"):
             raise ValueError("There is no class element")
-        obj = self._class_factories[x["class"]]()
+        try:
+            obj = self._class_factories[x["class"]]()
+        except TypeError, e:
+            raise TypeError(e.message + " for " + x["class"], *e.args[1:])
         for k in x:
             if k == "class": continue
             elif k == "attributes" and x["class"].endswith("_schema"):

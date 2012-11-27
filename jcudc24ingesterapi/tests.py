@@ -53,45 +53,34 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
         dataset1 = Dataset(None, temperature_schema)
         dataset2 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
-        dataset3 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
+#        dataset3 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
 
-        self.cleanup_files.push(dataset2.processing_script)
-        self.cleanup_files.push(dataset3.sampling.script)
-        self.cleanup_files.push(dataset3.processing_script)
+        self.cleanup_files.append(dataset2.processing_script)
+#        self.cleanup_files.push(dataset3.sampling.script)
+#        self.cleanup_files.push(dataset3.processing_script)
 
 #       Provisioning admin accepts the submitted project
         work = self.ingester_platform.createUnitOfWork()
 
         work.post(project_region)    # Save the region
 
-        loc1.region = project_region_id                  # Set the datasets location to use the projects region
+        loc1.region = project_region.id                  # Set the datasets location to use the projects region
         work.post(loc1)                        # Save the location
-        dataset1.location = loc1_id                            # Set the datasets location
+        dataset1.location = loc1.id                            # Set the datasets location
         work.post(dataset1)                # Save the dataset
 
-        loc2.region = project_region_id
+        loc2.region = project_region.id
         work.post(loc2)
-        dataset2.location = loc2_id
+        dataset2.location = loc2.id
         work.post(dataset2)
 
-        loc3.region = project_region_id
-        work.post(loc3)
-        dataset3.location = loc3_id
-        work.post(dataset3)
+#        loc3.region = project_region.id
+#        work.post(loc3)
+#        dataset3.location = loc3.id
+#        work.post(dataset3)
 
         try:
             work.commit()
-
-#            # No need to retrieve the id's any more
-#            project_region.id = work.getRealId(project_region_id)
-#
-#            loc1.id = work.getRealId(loc1_id)
-#            dataset1.id = work.getRealId(dataset1_id)
-#            loc2.id = work.getRealId(loc2_id)
-#            dataset2.id = work.getRealId(dataset2_id)
-#            loc3.id = work.getRealId(loc3_id)
-#            dataset3.id = work.getRealId(dataset3_id)
-
         except:
             assert(True, "Project creation failed")
 
@@ -252,6 +241,11 @@ class TestIngesterPersistence(unittest.TestCase):
         self.auth = CredentialsAuthentication("casey", "password")
         self.ingester_platform = IngesterPlatformAPI("http://localhost:8080", self.auth)
         self.cleanup_files = []
+        
+    def test_region_persistence(self):
+        project_region = Region("Test Region", ((1, 1), (2, 2),(2,1), (1,1)))
+        project_region1 = self.ingester_platform.post(project_region)
+        self.assertNotEqual(project_region1.id, None, "ID should have been set")
 
     def test_location_persistence(self):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
