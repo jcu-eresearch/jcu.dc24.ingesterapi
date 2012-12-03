@@ -19,7 +19,7 @@ class MetadataEntry(dict):
         self.metadata_schema = metadata_schema
 
         # Push the kwargs to fields
-        for key in metadata_schema.keys():
+        for key in metadata_schema.attrs.keys():
             self[key] = kwargs.pop(key, None)
 
         for key, value in kwargs:

@@ -41,8 +41,8 @@ class Marshaller(object):
         ret = {}
         if isinstance(obj, jcudc24ingesterapi.schemas.Schema):
             ret["attributes"] = {}
-            for k in obj.__dict__:
-                ret["attributes"][k] = self._classes[type(obj.__dict__[k])]
+            for k in obj.attrs:
+                ret["attributes"][k] = self._classes[type(obj.attrs[k])]
         else:
             ret = dict(obj.__dict__)
             for k in ret:

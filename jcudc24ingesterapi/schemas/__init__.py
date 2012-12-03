@@ -14,7 +14,9 @@ class Schema(object):
     will overwrite previous values.
     """
     id = None
+    def __init__(self):
+        self.attrs = {}
     def addAttr(self, name, data_type):
         if not isinstance(data_type, DataType):
             raise ValueError("Not a subclass of DataType")
-        setattr(self, name, data_type)
+        self.attrs[name] = data_type

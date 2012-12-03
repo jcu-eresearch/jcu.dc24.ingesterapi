@@ -18,8 +18,8 @@ class DataEntry(dict):
         self.timestamp = timestamp
 
         # Push the kwargs to fields
-        for key in data_type_schema.keys():
-            self[key] =  kwargs.pop(key, None)
+#        for key in data_type_schema.keys():
+#            self[key] =  kwargs.pop(key, None)
 
         for key, value in kwargs:
             raise UnknownParameterError(key, value)

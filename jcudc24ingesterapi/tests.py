@@ -135,17 +135,18 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 #            assert(True, "Sampling rate change failed")
 
 #       User wants some random metadata specific to their project
-        random_metadata_schema =  DataEntryMetadataSchema()
-        random_metadata_schema.addAttr('random_field', Double())
+# FIXME: Not sure what use case this is trying to demonstrate
+#        random_metadata_schema =  DataEntryMetadataSchema()
+#        random_metadata_schema.addAttr('random_field', Double())
 
-        random_metadata = Metadata(data_entry.data_entry_id, type(data_entry), random_metadata_schema)
-        random_metadata.random_field = 1.5
+#        random_metadata = Metadata(data_entry.data_entry_id, type(data_entry), random_metadata_schema)
+#        random_metadata.random_field = 1.5
 
-        try:
-            random_metadata = self.ingester_platform.post(random_metadata)
-            assert(random_metadata.metadata_id is None, "random_metadata failed")
-        except:
-            assert(True, "random_metadata failed")
+#        try:
+#            random_metadata = self.ingester_platform.post(random_metadata)
+#            assert(random_metadata.metadata_id is None, "random_metadata failed")
+#        except:
+#            assert(True, "random_metadata failed")
 
 #       User changes the data source of the dataset
         new_data_source = PullDataSource("http://test.com/new_data", "file_handle")
