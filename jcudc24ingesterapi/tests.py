@@ -37,16 +37,6 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         project_region = Region("Test Region", ((1, 1), (2, 2),(2,1), (1,1)))
 
         #   Methods & Datasets
-        temperature_schema = DataEntrySchema()
-        temperature_schema.addAttr("file", FileDataType())
-        temperature_schema.addAttr("Temperature", Double())   
-        temperature_schema = self.ingester_platform.post(temperature_schema)
-        
-        file_schema = DataEntrySchema()
-        file_schema.addAttr("file", FileDataType())
-        file_schema = self.ingester_platform.post(file_schema)
-
-        loc1 = Location(10.0, 11.0, "Test Site", 100)
         loc2 = Location(11.0, 11.0, "Test Site", 100)
         loc3 = Location(12.0, 11.0, "Test Site", 100)
 
@@ -182,6 +172,26 @@ class ProvisioningInterfaceTest(unittest.TestCase):
                 assert(True, "delete commit failed")
         except:
             assert(True, "delete failed")
+
+    def testMultiDatasetExtraction(self):
+        """This test demonstrates use case #xxx.
+        There are 2 datasets created, the first holds a datafile, and has a pull ingest occurring, along with 
+        a configured custom script. The second dataset holds observation data, that will be extracted from the
+        datafile in the first dataset.
+        """
+        temperature_schema = DataEntrySchema()
+        temperature_schema.addAttr("Temperature", Double())   
+        temperature_schema = self.ingester_platform.post(temperature_schema)
+        
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
+
+        location = self.ingester_platform.post(Location(10.0, 11.0, "Test Site", 100))
+        temp_dataset = Dataset(None, temperature_schema)
+        file_dataset = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+
+
 
 
     def tearDown(self):
