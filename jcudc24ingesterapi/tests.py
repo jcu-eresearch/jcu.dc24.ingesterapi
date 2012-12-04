@@ -174,7 +174,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
             assert(True, "delete failed")
 
     def testMultiDatasetExtraction(self):
-        """This test demonstrates use case #xxx.
+        """This test demonstrates use case #402.
         There are 2 datasets created, the first holds a datafile, and has a pull ingest occurring, along with 
         a configured custom script. The second dataset holds observation data, that will be extracted from the
         datafile in the first dataset.
