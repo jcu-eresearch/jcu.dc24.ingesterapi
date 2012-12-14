@@ -1,8 +1,10 @@
+from jcudc24ingesterapi.models.sampling import _Sampling
+from jcudc24ingesterapi.schemas.data_types import String, Double, DateTime, DataType
+from jcudc24ingesterapi.schemas import Schema
+
 __author__ = 'Casey Bajema'
 
-from jcudc24ingesterapi.schemas.data_types import DataType
-
-class Schema(object):
+class DataEntrySchema(Schema):
     """
     Base class for all calibration schemas that provide a known type.
 
@@ -13,10 +15,4 @@ class Schema(object):
     (sub-classed from _CalibrationSchema) added to the same data_entry.  Sending a duplicate calibration
     will overwrite previous values.
     """
-    id = None
-    def __init__(self):
-        self.attrs = {}
-    def addAttr(self, name, data_type):
-        if not isinstance(data_type, DataType):
-            raise ValueError("Not a subclass of DataType")
-        self.attrs[name] = data_type
+    __xmlrpc_class__ = "data_entry_schema"

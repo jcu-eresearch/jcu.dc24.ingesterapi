@@ -1,23 +1,21 @@
 import datetime
-from sqlalchemy.dialects.mysql.base import DOUBLE
 import os
 import unittest
-from sqlalchemy.types import BOOLEAN
 import sys
 import tempfile
 
 from jcudc24ingesterapi.models.dataset import Dataset
 from jcudc24ingesterapi.models.locations import Location, Region
-from jcudc24ingesterapi.schemas.data_types import FileDataType
+from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
 from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
 from jcudc24ingesterapi.models.data_entry import DataEntry
 from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
-from jcudc24ingesterapi.models.metadata import Metadata
-from jcudc24ingesterapi.schemas.metadata_schemas import QualityMetadataSchema, SampleRateMetadataSchema, NoteMetadataSchema, QualityMetadataSchema, MetadataSchema
+from jcudc24ingesterapi.models.metadata import MetadataEntry
+from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
 from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling, CustomSampling
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
-
+from jcudc24ingesterapi.schemas.data_entry_schemas import DataEntrySchema
 
 class ProvisioningInterfaceTest(unittest.TestCase):
     """
@@ -39,55 +37,41 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         project_region = Region("Test Region", ((1, 1), (2, 2),(2,1), (1,1)))
 
         #   Methods & Datasets
-        extended_file_schema = FileDataType()
-        extended_file_schema.temperature = DOUBLE()    # TODO: This is probably wrong - I'm not sure how it is being done now
-
-        loc1 = Location(10.0, 11.0, "Test Site", 100)
         loc2 = Location(11.0, 11.0, "Test Site", 100)
         loc3 = Location(12.0, 11.0, "Test Site", 100)
 
 
-        dataset1 = Dataset(None, FileDataType(), extended_file_schema)
-        dataset2 = Dataset(None, FileDataType(), PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
-        dataset3 = Dataset(None, FileDataType(), PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
+        dataset1 = Dataset(None, temperature_schema)
+        dataset2 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+#        dataset3 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
 
-        self.cleanup_files.push(dataset2.processing_script)
-        self.cleanup_files.push(dataset3.sampling.script)
-        self.cleanup_files.push(dataset3.processing_script)
+        self.cleanup_files.append(dataset2.processing_script)
+#        self.cleanup_files.push(dataset3.sampling.script)
+#        self.cleanup_files.push(dataset3.processing_script)
 
 #       Provisioning admin accepts the submitted project
         work = self.ingester_platform.createUnitOfWork()
 
-        project_region_id = work.post(project_region)    # Save the region
+        work.post(project_region)    # Save the region
 
-        loc1.region = project_region_id                  # Set the datasets location to use the projects region
-        loc1_id = work.post(loc1)                        # Save the location
-        dataset1.location = loc1_id                            # Set the datasets location
-        dataset1_id = work.post(dataset1)                # Save the dataset
+        loc1.region = project_region.id                  # Set the datasets location to use the projects region
+        work.post(loc1)                        # Save the location
+        dataset1.location = loc1.id                            # Set the datasets location
+        work.post(dataset1)                # Save the dataset
 
-        loc2.region = project_region_id
-        loc2_id = work.post(loc2)
-        dataset2.location = loc2_id
-        dataset2_id = work.post(dataset2)
+        loc2.region = project_region.id
+        work.post(loc2)
+        dataset2.location = loc2.id
+        work.post(dataset2)
 
-        loc3.region = project_region_id
-        loc3_id = work.post(loc3)
-        dataset3.location = loc3_id
-        dataset3_id = work.post(dataset3)
+#        loc3.region = project_region.id
+#        work.post(loc3)
+#        dataset3.location = loc3.id
+#        work.post(dataset3)
 
-        # TODO: Nigel - How would I know that it worked/failed?
-        if work.commit():
-            # TODO: Nigel - I can't see any way of getting the real id from the work
-            project_region.id = work.getRealId(project_region_id)
-
-            loc1.id = work.getRealId(loc1_id)
-            dataset1.id = work.getRealId(dataset1_id)
-            loc2.id = work.getRealId(loc2_id)
-            dataset2.id = work.getRealId(dataset2_id)
-            loc3.id = work.getRealId(loc3_id)
-            dataset3.id = work.getRealId(dataset3_id)
-
-        else:
+        try:
+            work.commit()
+        except:
             assert(True, "Project creation failed")
 
         # Region, location and dataset id's will be saved to the project within the provisioning system in some way
@@ -99,7 +83,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         found_dataset_id = dataset1.id                  # The dataset that has an extended file schema
 
 #       User manually enters data
-        data_entry = DataEntry(found_dataset_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+        data_entry = DataEntry(found_dataset_id, datetime.datetime.now())
         data_entry['temperature'] = 27.8                # Add the extended schema items
         data_entry['mime_type'] = "text/xml"
         data_entry['file_handle'] = "file://c:/test_file.txt"
@@ -111,10 +95,16 @@ class ProvisioningInterfaceTest(unittest.TestCase):
             assert(True, "Data Entry failed")
 
 #       User enters quality assurance metadata
-        entered_metadata = Metadata(data_entry.data_entry_id, QualityMetadataSchema())
-        entered_metadata.unit = "%"
-        entered_metadata.description = "Percent error"
-        entered_metadata.value = 0.98
+        quality_metadata_schema = DatasetMetadataSchema()
+        quality_metadata_schema.addAttr("unit", String())
+        quality_metadata_schema.addAttr("description", String())
+        quality_metadata_schema.addAttr("value", Double())
+        quality_metadata_schema = self.ingester_platform.post(quality_metadata_schema)
+        
+        entered_metadata = MetadataEntry(data_entry.data_entry_id, quality_metadata_schema)
+        entered_metadata['unit'] = "%"
+        entered_metadata['description'] = "Percent error"
+        entered_metadata['value'] = 0.98
 
         try:
             entered_metadata = self.ingester_platform.post(entered_metadata)
@@ -123,28 +113,30 @@ class ProvisioningInterfaceTest(unittest.TestCase):
             assert(True, "Metadata failed")
 
 #       User changes sampling rate
-        sampling_rate_changed = Metadata(data_entry.data_entry_id, SampleRateMetadataSchema())
-        sampling_rate_changed.change_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-        sampling_rate_changed.sampling = CustomSampling("file://d:/sampling_scripts/awsome_sampling.py")
-
-        try:
-            sampling_rate_changed = self.ingester_platform.post(sampling_rate_changed)
-            assert(sampling_rate_changed.metadata_id is None, "Sampling rate change failed")
-        except:
-            assert(True, "Sampling rate change failed")
+# FIXME: This test is going to be changed to be done by editing the dataset
+#        sampling_rate_changed = Metadata(dataset1.id, type(dataset1), SampleRateMetadataSchema())
+#        sampling_rate_changed.change_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+#        sampling_rate_changed.sampling = CustomSampling("file://d:/sampling_scripts/awsome_sampling.py")
+#
+#        try:
+#            sampling_rate_changed = self.ingester_platform.post(sampling_rate_changed)
+#            assert(sampling_rate_changed.metadata_id is None, "Sampling rate change failed")
+#        except:
+#            assert(True, "Sampling rate change failed")
 
 #       User wants some random metadata specific to their project
-        random_metadata_schema =  MetadataSchema()
-        random_metadata_schema.random_field = DOUBLE()
+# FIXME: Not sure what use case this is trying to demonstrate
+#        random_metadata_schema =  DataEntryMetadataSchema()
+#        random_metadata_schema.addAttr('random_field', Double())
 
-        random_metadata = Metadata(data_entry.data_entry_id, random_metadata_schema)
-        random_metadata.random_field = 1.5
+#        random_metadata = Metadata(data_entry.data_entry_id, type(data_entry), random_metadata_schema)
+#        random_metadata.random_field = 1.5
 
-        try:
-            random_metadata = self.ingester_platform.post(random_metadata)
-            assert(random_metadata.metadata_id is None, "random_metadata failed")
-        except:
-            assert(True, "random_metadata failed")
+#        try:
+#            random_metadata = self.ingester_platform.post(random_metadata)
+#            assert(random_metadata.metadata_id is None, "random_metadata failed")
+#        except:
+#            assert(True, "random_metadata failed")
 
 #       User changes the data source of the dataset
         new_data_source = PullDataSource("http://test.com/new_data", "file_handle")
@@ -181,15 +173,35 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         except:
             assert(True, "delete failed")
 
+    def testMultiDatasetExtraction(self):
+        """This test demonstrates use case #402.
+        There are 2 datasets created, the first holds a datafile, and has a pull ingest occurring, along with 
+        a configured custom script. The second dataset holds observation data, that will be extracted from the
+        datafile in the first dataset.
+        """
+        temperature_schema = DataEntrySchema()
+        temperature_schema.addAttr("Temperature", Double())   
+        temperature_schema = self.ingester_platform.post(temperature_schema)
+        
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
+
+        location = self.ingester_platform.post(Location(10.0, 11.0, "Test Site", 100))
+        temp_dataset = Dataset(None, temperature_schema)
+        file_dataset = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+
+
+
 
     def tearDown(self):
         self.ingester_platform.reset()
 
-        for file in self.cleanup_files:
+        for f in self.cleanup_files:
             try:
-                os.remove(file)
+                os.remove(f)
             except:
-                print "failed to remove file: " + file
+                print "failed to remove file: " + f
 
 
 
@@ -233,7 +245,7 @@ class TestIngesterModels(unittest.TestCase):
         pass
 
 
-class TestIngesterService(unittest.TestCase):
+class TestIngesterPersistence(unittest.TestCase):
     """This set of tests checks that the CRUD functionality works as expected
     """
     def setUp(self):
@@ -241,16 +253,12 @@ class TestIngesterService(unittest.TestCase):
         self.ingester_platform = IngesterPlatformAPI("http://localhost:8080", self.auth)
         self.cleanup_files = []
         
-    def test_metadata_functionality(self):
-        loc = Location(10.0, 11.0, "Test Site", 100, None)
-        loc = self.ingester_platform.post(loc)
-        
-        dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
-        dataset1 = self.ingester_platform.post(dataset)
-        self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
-        self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
+    def test_region_persistence(self):
+        project_region = Region("Test Region", ((1, 1), (2, 2),(2,1), (1,1)))
+        project_region1 = self.ingester_platform.post(project_region)
+        self.assertNotEqual(project_region1.id, None, "ID should have been set")
 
-    def test_location_functionality(self):
+    def test_location_persistence(self):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         loc1 = self.ingester_platform.post(loc)
         self.assertNotEqual(loc1.id, None, "ID should have been set")
@@ -259,14 +267,53 @@ class TestIngesterService(unittest.TestCase):
         self.assertEqual(loc.elevation, loc1.elevation, "elevation does not match")
         self.assertEqual(loc.name, loc1.name, "name does not match")
 
-    def test_manual_ingest_functionality(self):
-        pass
+    def test_dataset_persistence(self):
+        loc = Location(10.0, 11.0, "Test Site", 100, None)
+        loc = self.ingester_platform.post(loc)
+        self.assertIsNotNone(loc, "Location should not be none")
+        self.assertIsNotNone(loc.id, "Location should not be none")
 
-    def test_sampling_functionality(self):
-        pass
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
+        
+        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+        dataset1 = self.ingester_platform.post(dataset)
+        self.assertIsNotNone(dataset1, "Dataset should not be none")
+        self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
+        self.assertEquals(dataset1.schema, dataset.schema, "schema does not match %d!=%d"%(dataset1.schema, dataset.schema))
 
-    def test_processing_functionality(self):
-        pass
+        datasets = self.ingester_platform.findDatasets()
+        self.assertEquals(1, len(datasets))
+
+        datasets = self.ingester_platform.findDatasets(location=loc.id)
+        self.assertEquals(1, len(datasets))
+
+
+    def test_unit_of_work_persistence(self):
+        unit = self.ingester_platform.createUnitOfWork()
+        
+        loc = Location(10.0, 11.0, "Test Site", 100, None)
+        unit.insert(loc)
+
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
+
+        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+        unit.insert(dataset)
+        
+        # Persist all the objects
+        unit.commit()
+
+        self.assertIsNotNone(loc, "Location should not be none")
+        self.assertIsNotNone(loc.id, "Location should not be none")
+        self.assertGreater(loc.id, 0, "Location ID not real")
+        self.assertEqual(loc.name, "Test Site", "Location name doesn't match")
+        
+        self.assertIsNotNone(dataset, "dataset should not be none")
+        self.assertIsNotNone(dataset.id, "dataset should not be none")
+        self.assertGreater(dataset.id, 0, "dataset ID not real")
 
     def tearDown(self):
         self.ingester_platform.reset()
@@ -283,11 +330,20 @@ class TestIngesterFunctionality(unittest.TestCase):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         loc = self.ingester_platform.post(loc)
         
-        dataset = Dataset(loc.id, {"file":"file"}, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"),
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
+        
+        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"),
                 PeriodicSampling(10000))
         dataset1 = self.ingester_platform.post(dataset)
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
+        
+        self.ingester_platform.disableDataset(dataset1.id)
+
+        dataset1a = self.ingester_platform.getDataset(dataset1.id)
+        self.assertEquals(dataset1a.enabled, False)
 
     def tearDown(self):
         self.ingester_platform.reset()
@@ -402,6 +458,9 @@ class TestIngesterFunctionality(unittest.TestCase):
 #                    os.remove(f_name)
 #                except:
 #                    print "Exception: ", str(sys.exc_info())
+
+class TestMarshaller(unittest.TestCase):
+    pass
 
 if __name__ == '__main__':
     unittest.main()

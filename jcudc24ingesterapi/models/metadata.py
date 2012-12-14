@@ -2,7 +2,7 @@ from jcudc24ingesterapi.ingester_exceptions import UnknownParameterError
 
 __author__ = 'Casey Bajema'
 
-class Metadata(dict):
+class MetadataEntry(dict):
     """
     Metadata class that provides further information about a single object, this could be a data_entry,
     dataset or any other stored object.
@@ -19,7 +19,7 @@ class Metadata(dict):
         self.metadata_schema = metadata_schema
 
         # Push the kwargs to fields
-        for key in metadata_schema.keys():
+        for key in metadata_schema.attrs.keys():
             self[key] = kwargs.pop(key, None)
 
         for key, value in kwargs:

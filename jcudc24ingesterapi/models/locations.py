@@ -6,8 +6,9 @@ class Region(dict):
 
         An example would be that Queensland is a sub-region of Australia
     """
+    __xmlrpc_class__ = "region"
 
-    def __init__(self, region_name, region_points, parent_regions = None, region_id = None):
+    def __init__(self, region_name = None, region_points = None, parent_regions = None, region_id = None):
         """
         :param region_name: A human recognisable string naming the region
         :param region_points: A 2D array of latitude/longitude points ((lat, long), (lat, long),...), the
@@ -15,8 +16,8 @@ class Region(dict):
         :param parent_regions: A region object containing the parent region.
         :return: The initialised region.
         """
-        self.region_id = region_id
-        self.region_name = region_name
+        self.id = region_id
+        self.name = region_name
         self.region_points = region_points
         self.parent_region = parent_regions
 
@@ -24,7 +25,8 @@ class Location(dict):
     """
     A 3D point on Earth.
     """
-
+    __xmlrpc_class__ = "location"
+    
     def __init__(self, latitude=None, longitude=None, location_name = None, elevation = None, region = None):
         """
         :param latitude: Double value indicating the latitude (WGS84 assumed, metadata should be attached otherwise)

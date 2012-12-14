@@ -1,11 +1,10 @@
-from sqlalchemy.dialects.mysql.base import VARCHAR, DOUBLE, INTEGER, TEXT
-from sqlalchemy.schema import ForeignKey
-from sqlalchemy.types import DATETIME
 from jcudc24ingesterapi.models.sampling import _Sampling
+from jcudc24ingesterapi.schemas.data_types import String, Double, DateTime, DataType
+from jcudc24ingesterapi.schemas import Schema
 
 __author__ = 'Casey Bajema'
 
-class MetadataSchema(dict):
+class DataEntryMetadataSchema(Schema):
     """
     Base class for all calibration models that provide a known type.
 
@@ -16,35 +15,7 @@ class MetadataSchema(dict):
     (sub-classed from _CalibrationSchema) added to the same data_entry.  Sending a duplicate calibration
     will overwrite previous values.
     """
-    metadata_id = INTEGER()          # Primary ID
-    foreign_object = None
+    __xmlrpc_class__ = "data_entry_metadata_schema"
 
-class QualityMetadataSchema(MetadataSchema):
-    """
-    Quality and calibration data about data_entry, there is a many to 1 relationship between quality
-    and data_entry respectively.
-
-    * Type and data_entry_id together form a unique key
-    * Type is a short word describing what the quality information is
-    * Unit of measure may not make sense for all quality data and is optional.
-    * Description is an optional field for textual quality information that is out of the ordinary or cannot be
-        represented as a number.
-    * Value may be omitted for purely textual quality data
-    """
-    unit = VARCHAR(50)              # (optional) Unit of measure
-    description = VARCHAR(250)      # (Optional) Text based quality (eg. camera has a cracked lens) or further description of value
-    value = DOUBLE()                # (Optional) A description
-
-class SampleRateMetadataSchema(MetadataSchema):
-    """
-
-    """
-    change_time = DATETIME()
-    sampling = _Sampling()
-
-class NoteMetadataSchema():
-    """
-
-    """
-    name = VARCHAR(100)
-    text = TEXT()
+class DatasetMetadataSchema(Schema):
+    __xmlrpc_class__ = "dataset_metadata_schema"

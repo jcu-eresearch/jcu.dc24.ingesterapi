@@ -26,6 +26,7 @@ class PullDataSource(_DataSource):
     """
     A data source that polls a URI for data of the dataset's data type.
     """
+    __xmlrpc_class__ = "pull_data_source"
     uri = None # Data source URI
     def __init__(self, uri=None, field=None):
         """Initialise the PullDataSource with a URI for the source file, and the field that 
