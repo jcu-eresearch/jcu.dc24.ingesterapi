@@ -16,4 +16,6 @@ class Dataset(object):
         self.redboxUri = redbox_uri                  # URL to the ReDBox collection.
         self.sampling = sampling
         self.enabled = False
+        self.description = None
+        
         

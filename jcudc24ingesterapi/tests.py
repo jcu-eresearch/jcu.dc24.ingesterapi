@@ -23,7 +23,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
     """
     def setUp(self):
         self.auth = CredentialsAuthentication("casey", "password")
-        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080", self.auth)
+        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080/api", self.auth)
         self.cleanup_files = []
 
     def test_api_usage(self):
@@ -37,9 +37,17 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         project_region = Region("Test Region", ((1, 1), (2, 2),(2,1), (1,1)))
 
         #   Methods & Datasets
+        loc1 = Location(11.0, 11.0, "Test Site", 100)
         loc2 = Location(11.0, 11.0, "Test Site", 100)
         loc3 = Location(12.0, 11.0, "Test Site", 100)
 
+        temperature_schema = DataEntrySchema()
+        temperature_schema.addAttr("Temperature", Double())   
+        temperature_schema = self.ingester_platform.post(temperature_schema)
+        
+        file_schema = DataEntrySchema()
+        file_schema.addAttr("file", FileDataType())
+        file_schema = self.ingester_platform.post(file_schema)
 
         dataset1 = Dataset(None, temperature_schema)
         dataset2 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
@@ -189,6 +197,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
         location = self.ingester_platform.post(Location(10.0, 11.0, "Test Site", 100))
         temp_dataset = Dataset(None, temperature_schema)
+
+
+
         file_dataset = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
 
 
@@ -250,7 +261,7 @@ class TestIngesterPersistence(unittest.TestCase):
     """
     def setUp(self):
         self.auth = CredentialsAuthentication("casey", "password")
-        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080", self.auth)
+        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080/api", self.auth)
         self.cleanup_files = []
         
     def test_region_persistence(self):
@@ -323,7 +334,7 @@ class TestIngesterFunctionality(unittest.TestCase):
     """
     def setUp(self):
         self.auth = CredentialsAuthentication("casey", "password")
-        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080", self.auth)
+        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080/api", self.auth)
         self.cleanup_files = []
         
     def test_pull_ingest_functionality(self):
