@@ -12,7 +12,7 @@ class DataType(object):
 
     Note: ForeignKey or other table links are not supported, only single, flat tables are supported.
     """
-    pass
+    description = None # Description of the field
 
 
 class FileDataType(DataType):
@@ -24,8 +24,6 @@ class FileDataType(DataType):
     a custom processing script to extract that data.
     """
     __xmlrpc_class__ = "file"
-    mime_type = None  # eg. text/xml
-    file_handle = None # URL (eg. file://c:/test_file.txt)
 
 class String(DataType):
     __xmlrpc_class__ = "string"
