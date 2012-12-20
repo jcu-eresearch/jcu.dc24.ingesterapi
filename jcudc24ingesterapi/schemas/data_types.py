@@ -1,5 +1,8 @@
 __author__ = 'Casey Bajema'
 
+import re
+
+RE_ATTR_NAME = re.compile("^[A-Za-z][A-Za-z0-9]*$")
 # TODO: Add common data types (eg. temp, video, humidity, rain fall etc.)
 
 class DataType(object):
@@ -13,6 +16,14 @@ class DataType(object):
     Note: ForeignKey or other table links are not supported, only single, flat tables are supported.
     """
     description = None # Description of the field
+    name = None
+    units = None
+    def __init__(self, name, description=None, units=None):
+        if RE_ATTR_NAME.match(name) == None:
+            raise ValueError("Name is not valid")
+        self.name = name
+        self.description = description
+        self.units = units
 
 
 class FileDataType(DataType):
@@ -36,3 +47,8 @@ class Double(DataType):
 
 class DateTime(DataType):
     __xmlrpc_class__ = "datetime"
+
+class Boolean(DataType):
+    __xmlrpc_class__ = "boolean"
+    
+    

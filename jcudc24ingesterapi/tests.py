@@ -9,7 +9,7 @@ from jcudc24ingesterapi.models.locations import Location, Region
 from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
 from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
 from jcudc24ingesterapi.models.data_entry import DataEntry
-from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI
+from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marshaller
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
 from jcudc24ingesterapi.models.metadata import MetadataEntry
 from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
@@ -42,11 +42,11 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         loc3 = Location(12.0, 11.0, "Test Site", 100)
 
         temperature_schema = DataEntrySchema()
-        temperature_schema.addAttr("Temperature", Double())   
+        temperature_schema.addAttr(Double("Temperature"))   
         temperature_schema = self.ingester_platform.post(temperature_schema)
         
         file_schema = DataEntrySchema()
-        file_schema.addAttr("file", FileDataType())
+        file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
 
         dataset1 = Dataset(None, temperature_schema)
@@ -104,9 +104,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
 #       User enters quality assurance metadata
         quality_metadata_schema = DatasetMetadataSchema()
-        quality_metadata_schema.addAttr("unit", String())
-        quality_metadata_schema.addAttr("description", String())
-        quality_metadata_schema.addAttr("value", Double())
+        quality_metadata_schema.addAttr(String("unit"))
+        quality_metadata_schema.addAttr(String("description"))
+        quality_metadata_schema.addAttr(Double("value"))
         quality_metadata_schema = self.ingester_platform.post(quality_metadata_schema)
         
         entered_metadata = MetadataEntry(data_entry.data_entry_id, quality_metadata_schema)
@@ -188,11 +188,11 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         datafile in the first dataset.
         """
         temperature_schema = DataEntrySchema()
-        temperature_schema.addAttr("Temperature", Double())   
+        temperature_schema.addAttr(Double("Temperature"))   
         temperature_schema = self.ingester_platform.post(temperature_schema)
         
         file_schema = DataEntrySchema()
-        file_schema.addAttr("file", FileDataType())
+        file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
 
         location = self.ingester_platform.post(Location(10.0, 11.0, "Test Site", 100))
@@ -285,7 +285,7 @@ class TestIngesterPersistence(unittest.TestCase):
         self.assertIsNotNone(loc.id, "Location should not be none")
 
         file_schema = DataEntrySchema()
-        file_schema.addAttr("file", FileDataType())
+        file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
         
         dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
@@ -308,7 +308,7 @@ class TestIngesterPersistence(unittest.TestCase):
         unit.insert(loc)
 
         file_schema = DataEntrySchema()
-        file_schema.addAttr("file", FileDataType())
+        file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
 
         dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
@@ -342,7 +342,7 @@ class TestIngesterFunctionality(unittest.TestCase):
         loc = self.ingester_platform.post(loc)
         
         file_schema = DataEntrySchema()
-        file_schema.addAttr("file", FileDataType())
+        file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
         
         dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"),
@@ -471,7 +471,27 @@ class TestIngesterFunctionality(unittest.TestCase):
 #                    print "Exception: ", str(sys.exc_info())
 
 class TestMarshaller(unittest.TestCase):
-    pass
+    def setUp(self):
+        unittest.TestCase.setUp(self)
+        self.marshaller = Marshaller()
+    
+    def test_schema_attributes(self):
+        schema = DataEntryMetadataSchema()
+        schema.addAttr(Double("one"))
+        schema.addAttr(String("two"))
+        self.assertEquals("one", schema.attrs["one"].name)
+        self.assertEquals("two", schema.attrs["two"].name)
+        self.assertTrue(isinstance(schema.attrs["one"], Double))
+        self.assertTrue(isinstance(schema.attrs["two"], String))
+        
+        schema_dict = self.marshaller.obj_to_dict(schema)
+        
+        schema_obj = self.marshaller.dict_to_obj(schema_dict)
+        
+        self.assertEquals("one", schema_obj.attrs["one"].name)
+        self.assertEquals("two", schema_obj.attrs["two"].name)
+        self.assertTrue(isinstance(schema_obj.attrs["one"], Double))
+        self.assertTrue(isinstance(schema_obj.attrs["two"], String))
 
 if __name__ == '__main__':
     unittest.main()

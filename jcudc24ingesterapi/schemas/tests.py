@@ -8,14 +8,21 @@ class TestSchemas(unittest.TestCase):
         as they are constructed.
         """
         good_schema = DataEntryMetadataSchema()
-        good_schema.addAttr("attr1", Double())
-        good_schema.addAttr("attr2", String())
+        good_schema.addAttr(Double("attr1"))
+        good_schema.addAttr(String("attr2"))
         
         bad_schema = DataEntryMetadataSchema()
-        self.assertRaises(ValueError, bad_schema.addAttr, "attr2", str)        
+        self.assertRaises(ValueError, bad_schema.addAttr, str)        
 
     def test_data_types(self):
         pass
+
+class TestDataTypes(unittest.TestCase):
+    def test_names(self):
+        self.assertRaises(ValueError, Double, "")
+        self.assertRaises(ValueError, Double, "dfkj dfjk")
+        self.assertRaises(ValueError, Double, "1dfkjdfjk")
+        Double("validname")
 
 if __name__ == '__main__':
     unittest.main()

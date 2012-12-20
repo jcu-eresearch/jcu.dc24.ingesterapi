@@ -40,9 +40,11 @@ class Marshaller(object):
             raise ValueError("This object class is not supported: " + str(obj.__class__))
         ret = {}
         if isinstance(obj, jcudc24ingesterapi.schemas.Schema):
-            ret["attributes"] = {}
+            ret["attributes"] = []
             for k in obj.attrs:
-                ret["attributes"][k] = self._classes[type(obj.attrs[k])]
+                attr = obj.attrs[k]
+                ret["attributes"].append({"class":attr.__xmlrpc_class__, "name":attr.name, 
+                                          "description":attr.description, "units":attr.units})
         else:
             ret = dict(obj.__dict__)
             for k in ret:
@@ -66,8 +68,10 @@ class Marshaller(object):
         for k in x:
             if k == "class": continue
             elif k == "attributes" and x["class"].endswith("_schema"):
-                for k2 in x["attributes"]:
-                    setattr(obj, k2, self._class_factories[x["attributes"][k2]]())
+                for attr in x["attributes"]:
+                    obj.addAttr(self._class_factories[attr["class"]](attr["name"], 
+                                description=attr["description"], units=attr["units"]))
+#                    setattr(obj, k2, self._class_factories[x["attributes"][k2]]())
             else:
                 setattr(obj, k, x[k])
         return obj

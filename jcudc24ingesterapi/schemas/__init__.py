@@ -2,6 +2,35 @@ __author__ = 'Casey Bajema'
 
 from jcudc24ingesterapi.schemas.data_types import DataType
 
+class TypedList(list):
+    def __init__(self, valid_type):
+        self.valid_type = valid_type
+
+    def append(self, item):
+        if not isinstance(item, self.valid_type):
+            raise TypeError, 'item is not of type %s' % self.valid_type
+        super(TypedList, self).append(item)  #append the item to itself (the list)
+
+class SchemaAttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        self.update(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        if key != value.name:
+            raise ValueError("The provided key and the fields name do not match")
+        # optional processing here
+        super(SchemaAttrDict, self).__setitem__(key, value)
+
+    def update(self, *args, **kwargs):
+        if args:
+            if len(args) > 1:
+                raise TypeError("update expected at most 1 arguments, got %d" % len(args))
+            other = dict(args[0])
+            for key in other:
+                self[key] = other[key]
+        for key in kwargs:
+            self[key] = kwargs[key]
+        
 class Schema(object):
     """
     Base class for all calibration schemas that provide a known type.
@@ -15,8 +44,30 @@ class Schema(object):
     """
     id = None
     def __init__(self):
-        self.attrs = {}
-    def addAttr(self, name, data_type):
+        self.__attrs = SchemaAttrDict() 
+        self.__extends = TypedList(int)
+
+    def addAttr(self, data_type):
         if not isinstance(data_type, DataType):
             raise ValueError("Not a subclass of DataType")
-        self.attrs[name] = data_type
+        self.attrs[data_type.name] = data_type
+
+    @property
+    def attrs(self):
+        return self.__attrs
+
+    @property
+    def extends(self):
+        return self.__extends
+    
+    @extends.setter
+    def extends(self, values):
+        """Check that the list is valid before replacing it"""
+        tmp = TypedList(int)
+        for v in values:
+            tmp.append(v)
+        self.__extends = tmp
+        
+        
+    
+    
