@@ -10,6 +10,7 @@ def deleter(attr):
 def getter(attr):
     """Getter closure, used to simply return the inner variable"""
     def getter_real(self):
+        if not hasattr(self, attr): return None
         return getattr(self, attr)
     return getter_real
 
@@ -17,7 +18,7 @@ def setter(attr, valid_types):
     """Setter closure, used to do type checking before storing var"""
     def setter_real(self, var):
         if var != None and \
-                not isinstance(var, valid_types): raise TypeError("Not of required type: "+str(valid_types))
+                not isinstance(var, valid_types): raise TypeError("%s Not of required type: %s"%(str(type(var)), str(valid_types)))
         setattr(self,attr,var)
     return setter_real
 
