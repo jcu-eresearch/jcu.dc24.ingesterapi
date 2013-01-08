@@ -3,7 +3,6 @@ __author__ = 'Casey Bajema'
 import re
 
 RE_ATTR_NAME = re.compile("^[A-Za-z][A-Za-z0-9]*$")
-# TODO: Add common data types (eg. temp, video, humidity, rain fall etc.)
 
 class DataType(object):
     """
@@ -11,7 +10,6 @@ class DataType(object):
     these fields will then be used by the ingester platform to setup the required table.
 
     Field names map to table column names
-    Field values should be sqlalchemy data types defining the database column data type
 
     Note: ForeignKey or other table links are not supported, only single, flat tables are supported.
     """
