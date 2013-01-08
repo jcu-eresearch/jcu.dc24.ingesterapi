@@ -33,8 +33,8 @@ class PullDataSource(_DataSource):
     pattern = typed("_pattern", str, "Pattern for identifying files, and extracting metadata")
     mime_type = typed("_mime_type", str, "Mime type of the file")
     field = typed("_field", str, "Field name to ingest into")
-
-    def __init__(self, uri=None, pattern=None, mime_type=None, field=None, processing_script=None):
+    sampling_script = typed("_sampling_script", str, "Script to run to determine when to sample")
+    def __init__(self, uri=None, pattern=None, mime_type=None, field=None, processing_script=None, sampling_script=None):
         """Initialise the PullDataSource with a URI for the source file, and the field that 
         the uri will be saved to.
         """
@@ -43,6 +43,7 @@ class PullDataSource(_DataSource):
         self.pattern = pattern
         self.mime_type = mime_type
         self.processing_script = processing_script
+        self.sampling_script = sampling_script
 
 
 class PushDataSource(_DataSource):
