@@ -50,10 +50,10 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_schema = self.ingester_platform.post(file_schema)
 
         dataset1 = Dataset(None, temperature_schema)
-        dataset2 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+        dataset2 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle", processing_script="file://d:/processing_scripts/awsome_processing.py"), None)
 #        dataset3 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
 
-        self.cleanup_files.append(dataset2.processing_script)
+        self.cleanup_files.append(dataset2.data_source.processing_script)
 #        self.cleanup_files.push(dataset3.sampling.script)
 #        self.cleanup_files.push(dataset3.processing_script)
 
