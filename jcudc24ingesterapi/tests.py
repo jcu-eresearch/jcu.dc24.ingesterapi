@@ -199,8 +199,6 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         location = self.ingester_platform.post(Location(10.0, 11.0, "Test Site", 100))
         temp_dataset = Dataset(None, temperature_schema.id)
 
-
-
         file_dataset = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
 
 
@@ -318,9 +316,9 @@ More"""
  
         file_schema = DataEntrySchema()
         file_schema.addAttr(FileDataType("file"))
-        file_schema = self.ingester_platform.post(file_schema)
+        file_schema_id = unit.insert(file_schema)
 
-        self.assertIsNotNone(file_schema.id, "Schema ID should not be null")
+        self.assertIsNotNone(file_schema_id, "Schema ID should not be null")
 
         dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
         unit.insert(dataset)
