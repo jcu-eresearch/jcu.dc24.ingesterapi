@@ -6,7 +6,7 @@ import sys
 import tempfile
 
 from jcudc24ingesterapi.models.dataset import Dataset
-from jcudc24ingesterapi.models.locations import Location, Region
+from jcudc24ingesterapi.models.locations import Location, Region, LocationOffset
 from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
 from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
 from jcudc24ingesterapi.models.data_entry import DataEntry
@@ -50,9 +50,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
 
+        dataset1 = Dataset(None, temperature_schema.id)
+        dataset2 = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle", processing_script="file://d:/processing_scripts/awsome_processing.py"), None)
 
-        dataset1 = Dataset(None, temperature_schema)
-        dataset2 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle", processing_script="file://d:/processing_scripts/awsome_processing.py"), None)
 #        dataset3 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
 
         self.cleanup_files.append(dataset2.data_source.processing_script)
@@ -197,11 +197,11 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_schema = self.ingester_platform.post(file_schema)
 
         location = self.ingester_platform.post(Location(10.0, 11.0, "Test Site", 100))
-        temp_dataset = Dataset(None, temperature_schema)
+        temp_dataset = Dataset(None, temperature_schema.id)
 
 
 
-        file_dataset = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+        file_dataset = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
 
 
 
@@ -288,12 +288,20 @@ class TestIngesterPersistence(unittest.TestCase):
         file_schema = DataEntrySchema()
         file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
+
+        script_contents = """Some Script
+More"""
         
-        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", processing_script=script_contents), location_offset=LocationOffset(0, 1, 2))
         dataset1 = self.ingester_platform.post(dataset)
         self.assertIsNotNone(dataset1, "Dataset should not be none")
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match %d!=%d"%(dataset1.schema, dataset.schema))
+        self.assertEquals(dataset1.location_offset.x, 0)
+        self.assertEquals(dataset1.location_offset.y, 1)
+        self.assertEquals(dataset1.location_offset.z, 2)
+
+        self.assertEquals(dataset1.data_source.processing_script, script_contents)
 
         datasets = self.ingester_platform.findDatasets()
         self.assertEquals(1, len(datasets))
@@ -307,10 +315,12 @@ class TestIngesterPersistence(unittest.TestCase):
         
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         unit.insert(loc)
-
+ 
         file_schema = DataEntrySchema()
         file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
+
+        self.assertIsNotNone(file_schema.id, "Schema ID should not be null")
 
         dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
         unit.insert(dataset)
@@ -493,6 +503,23 @@ class TestMarshaller(unittest.TestCase):
         self.assertEquals("two", schema_obj.attrs["two"].name)
         self.assertTrue(isinstance(schema_obj.attrs["one"], Double))
         self.assertTrue(isinstance(schema_obj.attrs["two"], String))
+
+    def test_dataset_roundtrip(self):
+        """Attempt to round trip a dataset object"""
+        script_contents = """Some Script
+More"""
+        
+        dataset = Dataset(1, 2, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", processing_script=script_contents), location_offset=LocationOffset(0, 1, 2))
+
+        dataset_dict = self.marshaller.obj_to_dict(dataset)
+        dataset1 = self.marshaller.dict_to_obj(dataset_dict)
+
+        self.assertIsNotNone(dataset1, "Dataset should not be none")
+        self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
+        self.assertEquals(dataset1.schema, dataset.schema, "schema does not match %d!=%d"%(dataset1.schema, dataset.schema))
+        self.assertEquals(dataset1.location_offset.x, 0)
+        self.assertEquals(dataset1.location_offset.y, 1)
+        self.assertEquals(dataset1.location_offset.z, 2)
 
 if __name__ == '__main__':
     unittest.main()

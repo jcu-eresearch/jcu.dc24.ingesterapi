@@ -1,5 +1,5 @@
 from abc import abstractmethod
-
+from jcudc24ingesterapi import typed
 __author__ = 'Casey Bajema'
 
 
@@ -73,6 +73,8 @@ class PeriodicSampling(_Sampling):
     Sample at a set rate in milliseconds
     """
     __xmlrpc_class__ = "periodic_sampling"
+    rate = typed("_rate", int, "Rate of sampling in ms")
+
     def __init__(self, rate):
         self.rate = rate
 

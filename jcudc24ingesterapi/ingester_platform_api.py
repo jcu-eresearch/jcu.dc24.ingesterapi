@@ -1,5 +1,6 @@
 __author__ = 'Casey Bajema'
 import xmlrpclib
+import inspect
 import jcudc24ingesterapi.models.dataset
 import jcudc24ingesterapi.models.locations
 import jcudc24ingesterapi.models.sampling
@@ -45,15 +46,18 @@ class Marshaller(object):
                 attr = obj.attrs[k]
                 ret["attributes"].append({"class":attr.__xmlrpc_class__, "name":attr.name, 
                                           "description":attr.description, "units":attr.units})
-                if hasattr(obj, "id"):
-                    ret["id"] = obj.id
+            #if hasattr(obj, "id"):
+            #    ret["id"] = obj.id
         else:
-            ret = dict(obj.__dict__)
-            for k in ret:
-                if type(ret[k]) not in (str, int, float, unicode, dict, bool, type(None), tuple):
-                    ret[k] = self.obj_to_dict(ret[k])
+            data_keys = [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
+
+            for k in data_keys:
+                v = getattr(obj, k)
+                if type(v) not in (str, int, float, unicode, dict, bool, type(None), tuple):
+                    ret[k] = self.obj_to_dict(v)
+                else:
+                    ret[k] = v
         ret["class"] = self._classes[type(obj)]
-        
         return ret
 
     def dict_to_obj(self, x):
@@ -67,15 +71,25 @@ class Marshaller(object):
             obj = self._class_factories[x["class"]]()
         except TypeError, e:
             raise TypeError(e.message + " for " + x["class"], *e.args[1:])
+
+        data_keys = [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
+
         for k in x:
-            if k == "class": continue
+            if k == "class": 
+                continue
             elif k == "attributes" and x["class"].endswith("_schema"):
                 for attr in x["attributes"]:
                     obj.addAttr(self._class_factories[attr["class"]](attr["name"], 
                                 description=attr["description"], units=attr["units"]))
 #                    setattr(obj, k2, self._class_factories[x["attributes"][k2]]())
+            elif k not in data_keys:
+                print "Ignoring ", k
+                continue
             else:
-                setattr(obj, k, x[k])
+                if isinstance(x[k], dict):
+                    setattr(obj, k, self.dict_to_obj(x[k]))
+                else:
+                    setattr(obj, k, x[k])
         return obj
 
 class IngesterPlatformAPI(object):
@@ -169,11 +183,9 @@ class IngesterPlatformAPI(object):
         for obj in unit._to_update:
             if obj.id not in lookup: continue
             obj.__dict__ = lookup[obj.id].__dict__.copy()
-            del obj.correlationid
         for obj in unit._to_insert:
             if obj.id not in lookup: continue
             obj.__dict__ = lookup[obj.id].__dict__.copy()
-            del obj.correlationid
 
     def enableDataset(self, dataset_id):
         """

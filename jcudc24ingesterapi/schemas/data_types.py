@@ -1,6 +1,7 @@
 __author__ = 'Casey Bajema'
 
 import re
+from jcudc24ingesterapi import typed
 
 RE_ATTR_NAME = re.compile("^[A-Za-z][A-Za-z0-9]*$")
 
@@ -13,9 +14,9 @@ class DataType(object):
 
     Note: ForeignKey or other table links are not supported, only single, flat tables are supported.
     """
-    description = None # Description of the field
-    name = None
-    units = None
+    description = typed("_description", str, "Description of the field")
+    name = typed("_name", str, "Name of the field")
+    units = typed("_units", str, "Units of the field")
     def __init__(self, name, description=None, units=None):
         if name is None or RE_ATTR_NAME.match(name) == None:
             raise ValueError("Name is not valid")

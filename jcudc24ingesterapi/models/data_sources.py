@@ -14,8 +14,7 @@ class _DataSource(object):
     Data sources are known types that provide a known set of information but are unrelated to the data type.
     The ingester platform will need to implement data type specific ingesters for each data source.
     """
-    processing = None # Post processing script
-
+    processing_script = typed("_processing_script", str, "Script to run after download")
 
 class DatasetDataSource(_DataSource):
     """
@@ -34,7 +33,6 @@ class PullDataSource(_DataSource):
     pattern = typed("_pattern", str, "Pattern for identifying files, and extracting metadata")
     mime_type = typed("_mime_type", str, "Mime type of the file")
     field = typed("_field", str, "Field name to ingest into")
-    processing_script = typed("_processing_script", str, "Script to run after download")
     sampling_script = typed("_sampling_script", str, "Script to run to determine when to sample")
     def __init__(self, uri=None, pattern=None, mime_type=None, field=None, processing_script=None, sampling_script=None):
         """Initialise the PullDataSource with a URI for the source file, and the field that 
