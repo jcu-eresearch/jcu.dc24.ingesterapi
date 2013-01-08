@@ -46,6 +46,8 @@ class Marshaller(object):
                 attr = obj.attrs[k]
                 ret["attributes"].append({"class":attr.__xmlrpc_class__, "name":attr.name, 
                                           "description":attr.description, "units":attr.units})
+            if hasattr(obj, "id"):
+                ret["id"] = obj.id
         else:
             data_keys = [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
 
