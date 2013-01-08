@@ -9,10 +9,16 @@ class Dataset(object):
     metadata.
     """
     __xmlrpc_class__ = "dataset"
+    id = typed("_id", int)
+    location = typed("_location", int, "ID of location for dataset")
+    schema = typed("_schema", int, "ID of schema for dataset")
     data_source = typed("_data_source", _DataSource, "Data source used for ingesting")
     location_offset = typed("_location_offset", LocationOffset, "Offset from the locations frame of reference")
+    redbox_uri = typed("_redbox_uri", str, "Redbox URI")
+    enabled = typed("_enabled", bool, "Dataset enabled")
+    description = typed("_description", str, "Description of dataset")
 
-    def __init__(self, location = None, schema = None, data_source = None, sampling=None, redbox_uri = None):
+    def __init__(self, location = None, schema = None, data_source = None, sampling=None, redbox_uri = None, location_offset = None):
         self.id = None
         self.location = location
         self.schema = schema                      # subclass of DataType
@@ -21,5 +27,5 @@ class Dataset(object):
         self.sampling = sampling
         self.enabled = False
         self.description = None
-        
+        self.location_offset = location_offset
         

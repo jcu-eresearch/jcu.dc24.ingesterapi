@@ -1,4 +1,5 @@
 __author__ = 'Casey Bajema'
+from jcudc24ingesterapi import typed
 
 class Region(object):
     """
@@ -7,6 +8,10 @@ class Region(object):
         An example would be that Queensland is a sub-region of Australia
     """
     __xmlrpc_class__ = "region"
+    id = typed("_id", int)
+    name = typed("_name", str)
+    region_points = typed("_region_points", (tuple, list))
+    parent_region = typed("_parent_region", int)
 
     def __init__(self, region_name = None, region_points = None, parent_regions = None, region_id = None):
         """
@@ -27,6 +32,13 @@ class Location(object):
     """
     __xmlrpc_class__ = "location"
     
+    id = typed("_id", int)
+    name = typed("_name", str)
+    latitude = typed("_latitude", float)
+    longitude = typed("_longitude", float)
+    elevation = typed("_elevation", (int,float))
+    region = typed("_region", int, "ID of region")
+
     def __init__(self, latitude=None, longitude=None, location_name = None, elevation = None, region = None):
         """
         :param latitude: Double value indicating the latitude (WGS84 assumed, metadata should be attached otherwise)
@@ -48,7 +60,10 @@ class LocationOffset(object):
     """An offset from a frame of reference.
     """
     __xmlrpc_class__ = "offset"
-    def __init__(self, x, y, z):
+    x = typed("_x", (int, float))
+    y = typed("_y", (int, float))
+    z = typed("_z", (int, float))
+    def __init__(self, x=None, y=None, z=None):
         self.x = x
         self.y = y
         self.z = z
