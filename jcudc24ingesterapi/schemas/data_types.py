@@ -17,7 +17,7 @@ class DataType(object):
     name = None
     units = None
     def __init__(self, name, description=None, units=None):
-        if RE_ATTR_NAME.match(name) == None:
+        if name is None or RE_ATTR_NAME.match(name) == None:
             raise ValueError("Name is not valid")
         self.name = name
         self.description = description

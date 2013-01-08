@@ -220,6 +220,9 @@ class IngesterPlatformAPI(object):
         """
         return UnitOfWork(self)
 
+    def close(self):
+        pass
+
 class UnitOfWork(object):
     """The unit of work encapsulates all the operations in a transaction.
     
