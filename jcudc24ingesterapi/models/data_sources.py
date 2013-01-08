@@ -1,4 +1,5 @@
 from jcudc24ingesterapi.models.sampling import _Sampling
+from jcudc24ingesterapi import typed
 
 """
     Defines all possible data sources or in other words data input methods that can be provisioned.
@@ -13,6 +14,8 @@ class _DataSource(object):
     Data sources are known types that provide a known set of information but are unrelated to the data type.
     The ingester platform will need to implement data type specific ingesters for each data source.
     """
+    processing = None # Post processing script
+
 
 class DatasetDataSource(_DataSource):
     """
@@ -21,19 +24,27 @@ class DatasetDataSource(_DataSource):
     def __init__(self, sampling, dataset_id):
         self.dataset_id = dataset_id
         self.sampling = sampling
-                                # TODO: finish this class off.
+
 class PullDataSource(_DataSource):
     """
     A data source that polls a URI for data of the dataset's data type.
     """
     __xmlrpc_class__ = "pull_data_source"
-    uri = None # Data source URI
-    def __init__(self, uri=None, field=None):
+    uri = typed("_uri", str, "URI of the directory to scan")
+    pattern = typed("_pattern", str, "Pattern for identifying files, and extracting metadata")
+    mime_type = typed("_mime_type", str, "Mime type of the file")
+    field = typed("_field", str, "Field name to ingest into")
+    processing_script = typed("_processing_script", str, "Script to run after download")
+
+    def __init__(self, uri=None, pattern=None, mime_type=None, field=None, processing_script=None):
         """Initialise the PullDataSource with a URI for the source file, and the field that 
         the uri will be saved to.
         """
         self.uri = uri
         self.field = field
+        self.pattern = pattern
+        self.mime_type = mime_type
+        self.processing_script = processing_script
 
 
 class PushDataSource(_DataSource):

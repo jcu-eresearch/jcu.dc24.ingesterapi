@@ -1,6 +1,6 @@
 __author__ = 'Casey Bajema'
 
-class Region(dict):
+class Region(object):
     """
         Represents a 2D area on earth, possible a sub-region of another regions.
 
@@ -21,7 +21,7 @@ class Region(dict):
         self.region_points = region_points
         self.parent_region = parent_regions
 
-class Location(dict):
+class Location(object):
     """
     A 3D point on Earth.
     """
@@ -44,3 +44,11 @@ class Location(dict):
         self.elevation = elevation                      # double
         self.region = region
 
+class LocationOffset(object):
+    """An offset from a frame of reference.
+    """
+    __xmlrpc_class__ = "offset"
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
