@@ -1,5 +1,5 @@
 from jcudc24ingesterapi.models.sampling import _Sampling
-from jcudc24ingesterapi import typed
+from jcudc24ingesterapi import typed, APIDomainObject
 
 """
     Defines all possible data sources or in other words data input methods that can be provisioned.
@@ -7,7 +7,7 @@ from jcudc24ingesterapi import typed
 
 __author__ = 'Casey Bajema'
 
-class _DataSource(object):
+class _DataSource(APIDomainObject):
     """
     Base data source class that does nothing beyond defining a known type.
 

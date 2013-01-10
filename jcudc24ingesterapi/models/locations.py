@@ -1,7 +1,7 @@
 __author__ = 'Casey Bajema'
-from jcudc24ingesterapi import typed
+from jcudc24ingesterapi import typed, APIDomainObject
 
-class Region(object):
+class Region(APIDomainObject):
     """
         Represents a 2D area on earth, possible a sub-region of another regions.
 
@@ -26,7 +26,7 @@ class Region(object):
         self.region_points = region_points
         self.parent_region = parent_regions
 
-class Location(object):
+class Location(APIDomainObject):
     """
     A 3D point on Earth.
     """
@@ -56,7 +56,7 @@ class Location(object):
         self.elevation = elevation                      # double
         self.region = region
 
-class LocationOffset(object):
+class LocationOffset(APIDomainObject):
     """An offset from a frame of reference.
     """
     __xmlrpc_class__ = "offset"

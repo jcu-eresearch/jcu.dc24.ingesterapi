@@ -5,6 +5,7 @@ from jcudc24ingesterapi.models.data_sources import PullDataSource
 from jcudc24ingesterapi.models.dataset import Dataset
 
 class TestIngesterModels(unittest.TestCase):
+    """Test the validation of the domain objects"""
     def test_metadata(self):
         pass
 

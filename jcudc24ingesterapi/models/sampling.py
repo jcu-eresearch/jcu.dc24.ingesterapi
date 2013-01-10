@@ -1,9 +1,10 @@
 from abc import abstractmethod
-from jcudc24ingesterapi import typed
+from jcudc24ingesterapi import typed, APIDomainObject
+
 __author__ = 'Casey Bajema'
 
 
-class _Sampling(dict):
+class _Sampling(APIDomainObject):
     """
     Base sampling object that defines the type.
 

@@ -1,9 +1,9 @@
 __author__ = 'Casey Bajema'
-from jcudc24ingesterapi import typed
+from jcudc24ingesterapi import typed, APIDomainObject
 from jcudc24ingesterapi.models.data_sources import _DataSource
 from jcudc24ingesterapi.models.locations import LocationOffset
 
-class Dataset(object):
+class Dataset(APIDomainObject):
     """
     Represents a single dataset and contains the information required to ingest the data as well as location
     metadata.

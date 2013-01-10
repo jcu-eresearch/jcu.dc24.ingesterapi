@@ -1,6 +1,9 @@
 __author__ = 'Casey Bajema'
 import xmlrpclib
 import inspect
+import datetime
+
+from jcudc24ingesterapi import parse_timestamp, format_timestamp
 import jcudc24ingesterapi.models.dataset
 import jcudc24ingesterapi.models.locations
 import jcudc24ingesterapi.models.sampling
@@ -21,6 +24,7 @@ class Marshaller(object):
         self.scanPackage(jcudc24ingesterapi.models.dataset)
         self.scanPackage(jcudc24ingesterapi.models.sampling)
         self.scanPackage(jcudc24ingesterapi.models.data_sources)
+        self.scanPackage(jcudc24ingesterapi.models.data_entry)
         self.scanPackage(jcudc24ingesterapi.schemas.metadata_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_entry_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_types)
@@ -53,7 +57,9 @@ class Marshaller(object):
 
             for k in data_keys:
                 v = getattr(obj, k)
-                if type(v) not in (str, int, float, unicode, dict, bool, type(None), tuple):
+                if type(v) == datetime.datetime:
+                    ret[k] = format_timestamp(v)
+                elif type(v) not in (str, int, float, unicode, dict, bool, type(None), tuple):
                     ret[k] = self.obj_to_dict(v)
                 else:
                     ret[k] = v
@@ -72,7 +78,8 @@ class Marshaller(object):
         except TypeError, e:
             raise TypeError(e.message + " for " + x["class"], *e.args[1:])
 
-        data_keys = [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
+        # Create a dict of the properties, and the valid types allowed
+        data_keys = dict([ (k,v.fset.valid_types if v.fset != None and hasattr(v.fset, "valid_types") else []) for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)])
 
         for k in x:
             if k == "class": 
@@ -86,8 +93,10 @@ class Marshaller(object):
                 print "Ignoring ", k
                 continue
             else:
-                if isinstance(x[k], dict):
+                if isinstance(x[k], dict) and dict not in data_keys[k]:
                     setattr(obj, k, self.dict_to_obj(x[k]))
+                elif datetime.datetime in data_keys[k]:
+                    setattr(obj, k, parse_timestamp(x[k]))
                 else:
                     setattr(obj, k, x[k])
         return obj
@@ -177,7 +186,10 @@ class IngesterPlatformAPI(object):
                     "update":[self._marshaller.obj_to_dict(obj) for obj in unit._to_update],
                     "insert":[self._marshaller.obj_to_dict(obj) for obj in unit._to_insert]}
         
-        results = self.server.commit(unit_dto)
+        transaction_id = self.server.precommit(unit_dto)
+        # do uploads
+        results = self.server.commit(transaction_id)
+        
         lookup = {}
         for result in results: lookup[result["correlationid"]] = self._marshaller.dict_to_obj(result)
         for obj in unit._to_update:

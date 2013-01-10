@@ -79,10 +79,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 #        dataset3.location = loc3.id
 #        work.post(dataset3)
 
-        try:
-            work.commit()
-        except:
-            assert(True, "Project creation failed")
+        work.commit()
 
         # Region, location and dataset id's will be saved to the project within the provisioning system in some way
 
@@ -98,11 +95,8 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         data_entry['mime_type'] = "text/xml"
         data_entry['file_handle'] = "file://c:/test_file.txt"
 
-        try:
-            data_entry = self.ingester_platform.post(data_entry)
-            assert(data_entry.id is None, "Data Entry failed")
-        except:
-            assert(True, "Data Entry failed")
+        data_entry = self.ingester_platform.post(data_entry)
+        self.assertNotNone(data_entry.id)
 
 #       User enters quality assurance metadata
         quality_metadata_schema = DatasetMetadataSchema()
@@ -116,11 +110,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         entered_metadata['description'] = "Percent error"
         entered_metadata['value'] = 0.98
 
-        try:
-            entered_metadata = self.ingester_platform.post(entered_metadata)
-            assert(entered_metadata.metadata_id is None, "Metadata failed")
-        except:
-            assert(True, "Metadata failed")
+        entered_metadata = self.ingester_platform.post(entered_metadata)
 
 #       User changes sampling rate
 # FIXME: This test is going to be changed to be done by editing the dataset
@@ -151,36 +141,23 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 #       User changes the data source of the dataset
         new_data_source = PullDataSource("http://test.com/new_data", "file_handle")
         dataset1.data_source = new_data_source
-        try:
-            dataset1 = self.ingester_platform.post(dataset1)
-        except:
-            assert(True, "data_source change failed")
+        dataset1 = self.ingester_platform.post(dataset1)
 
 #       External, 3rd party searches for data
         # TODO: external 3rd parties should be able to use the api to get data without authentication
         # TODO: I'm not sure exactly how this should work, but the search api could be open access (need spam limitations or something?)
 
 #       Project is disabled/finished
-        try:
-            work = self.ingester_platform.createUnitOfWork()
-            work.disable(dataset1)
-            work.disable(dataset2)
-            work.disable(dataset3)
-            if not work.commit():
-                assert(True, "disable commit failed")
-        except:
-            assert(True, "disable failed")
+        work = self.ingester_platform.createUnitOfWork()
+        work.disable(dataset1)
+        work.disable(dataset2)
+        work.commit()
 
 #       Project is obsolete and data should be deleted
-        try:
-            work = self.ingester_platform.createUnitOfWork()
-            work.delete(dataset1)
-            work.delete(dataset2)
-            work.delete(dataset3)
-            if not work.commit():
-                assert(True, "delete commit failed")
-        except:
-            assert(True, "delete failed")
+        work = self.ingester_platform.createUnitOfWork()
+        work.delete(dataset1)
+        work.delete(dataset2)
+        work.commit()
 
     def testMultiDatasetExtraction(self):
         """This test demonstrates use case #402.
@@ -222,6 +199,23 @@ class TestIngesterModels(unittest.TestCase):
 
     def test_ingester_exceptions(self):
         pass
+
+    def test_listeners(self):
+        # Use a list ot beat the closure
+        called = [False] 
+        
+        def loc_listener(obj, var, value):
+            called.remove(False)
+            called.append(True)
+            
+            self.assertEquals("_id", var)
+            self.assertEquals(1, value)
+        
+        loc = Location()
+        loc.set_listener(loc_listener)
+        loc.id = 1
+        self.assertTrue(called[0])
+        
 
 #    def test_ingester_platform(self):
 #        self.ingester_platform = IngesterPlatformAPI()
@@ -480,6 +474,7 @@ class TestIngesterFunctionality(unittest.TestCase):
 #                    print "Exception: ", str(sys.exc_info())
 
 class TestMarshaller(unittest.TestCase):
+    """Test marshalling and object round tripping"""
     def setUp(self):
         unittest.TestCase.setUp(self)
         self.marshaller = Marshaller()
@@ -518,6 +513,23 @@ More"""
         self.assertEquals(dataset1.location_offset.x, 0)
         self.assertEquals(dataset1.location_offset.y, 1)
         self.assertEquals(dataset1.location_offset.z, 2)
+
+    def test_data_entry(self):
+        dt = datetime.datetime.utcfromtimestamp(1357788112)
+        dt = dt.replace(tzinfo = jcudc24ingesterapi.UTC)
+        
+        data_entry = DataEntry(1, dt)
+        data_entry["temp"] = 1.2
+        
+        data_entry_dto = self.marshaller.obj_to_dict(data_entry)
+        self.assertEquals("2013-01-10T03:21:52.000Z", data_entry_dto["timestamp"])
+        self.assertEquals(1, data_entry_dto["dataset"])
+        self.assertEquals(1.2, data_entry_dto["data"]["temp"])
+
+        data_entry_return = self.marshaller.dict_to_obj(data_entry_dto)
+        self.assertEquals(data_entry.timestamp, data_entry_return.timestamp)
+        self.assertEquals(data_entry.dataset, data_entry_return.dataset)
+        self.assertEquals(data_entry.data["temp"], data_entry_return.data["temp"])
 
 if __name__ == '__main__':
     unittest.main()

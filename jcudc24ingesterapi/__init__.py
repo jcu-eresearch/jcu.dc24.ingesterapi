@@ -3,6 +3,7 @@ __author__ = 'Casey Bajema'
 import time
 import datetime
 import email.utils as eut
+import inspect
 
 def deleter(attr):
     """Deleter closure, used to remove the inner variable"""
@@ -25,6 +26,10 @@ def setter(attr, valid_types):
         if var != None and \
                 not isinstance(var, valid_types): raise TypeError("%s Not of required type: %s"%(str(type(var)), str(valid_types)))
         setattr(self,attr,var)
+        if hasattr(self, "_listener") and inspect.isfunction(getattr(self, "_listener")):
+            func = getattr(self, "_listener")
+            func(self, attr, var)
+            
     setter_real.valid_types = valid_types
     return setter_real
 
@@ -68,3 +73,10 @@ def parse_timestamp(date_str):
     mSeconds = datetime.timedelta(microseconds = int(mSecs))
 
     return dt+mSeconds
+
+class APIDomainObject(object):
+    """This is the base class of all API domain objects, and provides a listener method
+    for indicating when data on the object is updated."""
+    def set_listener(self, func):
+        self._listener = func
+        

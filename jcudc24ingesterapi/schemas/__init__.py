@@ -1,6 +1,6 @@
 __author__ = 'Casey Bajema'
 
-from jcudc24ingesterapi import typed
+from jcudc24ingesterapi import typed, APIDomainObject
 from jcudc24ingesterapi.schemas.data_types import DataType
 
 class TypedList(list):
@@ -32,7 +32,7 @@ class SchemaAttrDict(dict):
         for key in kwargs:
             self[key] = kwargs[key]
         
-class Schema(object):
+class Schema(APIDomainObject):
     """
     Base class for all calibration schemas that provide a known type.
 
