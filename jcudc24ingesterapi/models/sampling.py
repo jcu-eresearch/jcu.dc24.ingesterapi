@@ -1,9 +1,10 @@
 from abc import abstractmethod
+from jcudc24ingesterapi import typed, APIDomainObject
 
 __author__ = 'Casey Bajema'
 
 
-class _Sampling(dict):
+class _Sampling(APIDomainObject):
     """
     Base sampling object that defines the type.
 
@@ -73,6 +74,8 @@ class PeriodicSampling(_Sampling):
     Sample at a set rate in milliseconds
     """
     __xmlrpc_class__ = "periodic_sampling"
+    rate = typed("_rate", int, "Rate of sampling in ms")
+
     def __init__(self, rate):
         self.rate = rate
 

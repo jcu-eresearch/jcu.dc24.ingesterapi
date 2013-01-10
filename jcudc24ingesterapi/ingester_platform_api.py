@@ -1,5 +1,9 @@
 __author__ = 'Casey Bajema'
 import xmlrpclib
+import inspect
+import datetime
+
+from jcudc24ingesterapi import parse_timestamp, format_timestamp
 import jcudc24ingesterapi.models.dataset
 import jcudc24ingesterapi.models.locations
 import jcudc24ingesterapi.models.sampling
@@ -20,6 +24,7 @@ class Marshaller(object):
         self.scanPackage(jcudc24ingesterapi.models.dataset)
         self.scanPackage(jcudc24ingesterapi.models.sampling)
         self.scanPackage(jcudc24ingesterapi.models.data_sources)
+        self.scanPackage(jcudc24ingesterapi.models.data_entry)
         self.scanPackage(jcudc24ingesterapi.schemas.metadata_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_entry_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_types)
@@ -45,13 +50,20 @@ class Marshaller(object):
                 attr = obj.attrs[k]
                 ret["attributes"].append({"class":attr.__xmlrpc_class__, "name":attr.name, 
                                           "description":attr.description, "units":attr.units})
+            if hasattr(obj, "id"):
+                ret["id"] = obj.id
         else:
-            ret = dict(obj.__dict__)
-            for k in ret:
-                if type(ret[k]) not in (str, int, float, unicode, dict, bool, type(None), tuple):
-                    ret[k] = self.obj_to_dict(ret[k])
+            data_keys = [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
+
+            for k in data_keys:
+                v = getattr(obj, k)
+                if type(v) == datetime.datetime:
+                    ret[k] = format_timestamp(v)
+                elif type(v) not in (str, int, float, unicode, dict, bool, type(None), tuple):
+                    ret[k] = self.obj_to_dict(v)
+                else:
+                    ret[k] = v
         ret["class"] = self._classes[type(obj)]
-        
         return ret
 
     def dict_to_obj(self, x):
@@ -65,15 +77,28 @@ class Marshaller(object):
             obj = self._class_factories[x["class"]]()
         except TypeError, e:
             raise TypeError(e.message + " for " + x["class"], *e.args[1:])
+
+        # Create a dict of the properties, and the valid types allowed
+        data_keys = dict([ (k,v.fset.valid_types if v.fset != None and hasattr(v.fset, "valid_types") else []) for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)])
+
         for k in x:
-            if k == "class": continue
+            if k == "class": 
+                continue
             elif k == "attributes" and x["class"].endswith("_schema"):
                 for attr in x["attributes"]:
                     obj.addAttr(self._class_factories[attr["class"]](attr["name"], 
                                 description=attr["description"], units=attr["units"]))
 #                    setattr(obj, k2, self._class_factories[x["attributes"][k2]]())
+            elif k not in data_keys:
+                print "Ignoring ", k
+                continue
             else:
-                setattr(obj, k, x[k])
+                if isinstance(x[k], dict) and dict not in data_keys[k]:
+                    setattr(obj, k, self.dict_to_obj(x[k]))
+                elif datetime.datetime in data_keys[k]:
+                    setattr(obj, k, parse_timestamp(x[k]))
+                else:
+                    setattr(obj, k, x[k])
         return obj
 
 class IngesterPlatformAPI(object):
@@ -161,17 +186,18 @@ class IngesterPlatformAPI(object):
                     "update":[self._marshaller.obj_to_dict(obj) for obj in unit._to_update],
                     "insert":[self._marshaller.obj_to_dict(obj) for obj in unit._to_insert]}
         
-        results = self.server.commit(unit_dto)
+        transaction_id = self.server.precommit(unit_dto)
+        # do uploads
+        results = self.server.commit(transaction_id)
+        
         lookup = {}
         for result in results: lookup[result["correlationid"]] = self._marshaller.dict_to_obj(result)
         for obj in unit._to_update:
             if obj.id not in lookup: continue
             obj.__dict__ = lookup[obj.id].__dict__.copy()
-            del obj.correlationid
         for obj in unit._to_insert:
             if obj.id not in lookup: continue
             obj.__dict__ = lookup[obj.id].__dict__.copy()
-            del obj.correlationid
 
     def enableDataset(self, dataset_id):
         """
@@ -217,6 +243,9 @@ class IngesterPlatformAPI(object):
         """Creates a unit of work object that can be used to create transactional consistent set of operations
         """
         return UnitOfWork(self)
+
+    def close(self):
+        pass
 
 class UnitOfWork(object):
     """The unit of work encapsulates all the operations in a transaction.

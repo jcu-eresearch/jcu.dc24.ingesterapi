@@ -1,5 +1,6 @@
 __author__ = 'Casey Bajema'
 
+from jcudc24ingesterapi import typed, APIDomainObject
 from jcudc24ingesterapi.schemas.data_types import DataType
 
 class TypedList(list):
@@ -31,7 +32,7 @@ class SchemaAttrDict(dict):
         for key in kwargs:
             self[key] = kwargs[key]
         
-class Schema(object):
+class Schema(APIDomainObject):
     """
     Base class for all calibration schemas that provide a known type.
 
@@ -42,7 +43,8 @@ class Schema(object):
     (sub-classed from _CalibrationSchema) added to the same data_entry.  Sending a duplicate calibration
     will overwrite previous values.
     """
-    id = None
+    id = typed("_id", int)
+
     def __init__(self):
         self.__attrs = SchemaAttrDict() 
         self.__extends = TypedList(int)

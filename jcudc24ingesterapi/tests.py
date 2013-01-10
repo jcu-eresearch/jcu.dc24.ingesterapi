@@ -1,11 +1,12 @@
 import datetime
+import jcudc24ingesterapi
 import os
 import unittest
 import sys
 import tempfile
 
 from jcudc24ingesterapi.models.dataset import Dataset
-from jcudc24ingesterapi.models.locations import Location, Region
+from jcudc24ingesterapi.models.locations import Location, Region, LocationOffset
 from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
 from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
 from jcudc24ingesterapi.models.data_entry import DataEntry
@@ -49,11 +50,12 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
 
-        dataset1 = Dataset(None, temperature_schema)
-        dataset2 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+        dataset1 = Dataset(None, temperature_schema.id)
+        dataset2 = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle", processing_script="file://d:/processing_scripts/awsome_processing.py"), None)
+
 #        dataset3 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
 
-        self.cleanup_files.append(dataset2.processing_script)
+        self.cleanup_files.append(dataset2.data_source.processing_script)
 #        self.cleanup_files.push(dataset3.sampling.script)
 #        self.cleanup_files.push(dataset3.processing_script)
 
@@ -77,10 +79,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 #        dataset3.location = loc3.id
 #        work.post(dataset3)
 
-        try:
-            work.commit()
-        except:
-            assert(True, "Project creation failed")
+        work.commit()
 
         # Region, location and dataset id's will be saved to the project within the provisioning system in some way
 
@@ -96,11 +95,8 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         data_entry['mime_type'] = "text/xml"
         data_entry['file_handle'] = "file://c:/test_file.txt"
 
-        try:
-            data_entry = self.ingester_platform.post(data_entry)
-            assert(data_entry.id is None, "Data Entry failed")
-        except:
-            assert(True, "Data Entry failed")
+        data_entry = self.ingester_platform.post(data_entry)
+        self.assertNotNone(data_entry.id)
 
 #       User enters quality assurance metadata
         quality_metadata_schema = DatasetMetadataSchema()
@@ -114,11 +110,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         entered_metadata['description'] = "Percent error"
         entered_metadata['value'] = 0.98
 
-        try:
-            entered_metadata = self.ingester_platform.post(entered_metadata)
-            assert(entered_metadata.metadata_id is None, "Metadata failed")
-        except:
-            assert(True, "Metadata failed")
+        entered_metadata = self.ingester_platform.post(entered_metadata)
 
 #       User changes sampling rate
 # FIXME: This test is going to be changed to be done by editing the dataset
@@ -149,37 +141,23 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 #       User changes the data source of the dataset
         new_data_source = PullDataSource("http://test.com/new_data", "file_handle")
         dataset1.data_source = new_data_source
-        try:
-            dataset1 = self.ingester_platform.post(dataset1)
-        except:
-            assert(True, "data_source change failed")
+        dataset1 = self.ingester_platform.post(dataset1)
 
 #       External, 3rd party searches for data
         # TODO: external 3rd parties should be able to use the api to get data without authentication
         # TODO: I'm not sure exactly how this should work, but the search api could be open access (need spam limitations or something?)
 
 #       Project is disabled/finished
-        # TODO: Nigel - Create the disable method
-        try:
-            work = self.ingester_platform.createUnitOfWork()
-            work.disable(dataset1)
-            work.disable(dataset2)
-            work.disable(dataset3)
-            if not work.commit():
-                assert(True, "disable commit failed")
-        except:
-            assert(True, "disable failed")
+        work = self.ingester_platform.createUnitOfWork()
+        work.disable(dataset1)
+        work.disable(dataset2)
+        work.commit()
 
 #       Project is obsolete and data should be deleted
-        try:
-            work = self.ingester_platform.createUnitOfWork()
-            work.delete(dataset1)
-            work.delete(dataset2)
-            work.delete(dataset3)
-            if not work.commit():
-                assert(True, "delete commit failed")
-        except:
-            assert(True, "delete failed")
+        work = self.ingester_platform.createUnitOfWork()
+        work.delete(dataset1)
+        work.delete(dataset2)
+        work.commit()
 
     def testMultiDatasetExtraction(self):
         """This test demonstrates use case #402.
@@ -196,11 +174,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_schema = self.ingester_platform.post(file_schema)
 
         location = self.ingester_platform.post(Location(10.0, 11.0, "Test Site", 100))
-        temp_dataset = Dataset(None, temperature_schema)
+        temp_dataset = Dataset(None, temperature_schema.id)
 
-
-
-        file_dataset = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+        file_dataset = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
 
 
 
@@ -223,6 +199,23 @@ class TestIngesterModels(unittest.TestCase):
 
     def test_ingester_exceptions(self):
         pass
+
+    def test_listeners(self):
+        # Use a list ot beat the closure
+        called = [False] 
+        
+        def loc_listener(obj, var, value):
+            called.remove(False)
+            called.append(True)
+            
+            self.assertEquals("_id", var)
+            self.assertEquals(1, value)
+        
+        loc = Location()
+        loc.set_listener(loc_listener)
+        loc.id = 1
+        self.assertTrue(called[0])
+        
 
 #    def test_ingester_platform(self):
 #        self.ingester_platform = IngesterPlatformAPI()
@@ -287,12 +280,20 @@ class TestIngesterPersistence(unittest.TestCase):
         file_schema = DataEntrySchema()
         file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
+
+        script_contents = """Some Script
+More"""
         
-        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", processing_script=script_contents), location_offset=LocationOffset(0, 1, 2))
         dataset1 = self.ingester_platform.post(dataset)
         self.assertIsNotNone(dataset1, "Dataset should not be none")
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match %d!=%d"%(dataset1.schema, dataset.schema))
+        self.assertEquals(dataset1.location_offset.x, 0)
+        self.assertEquals(dataset1.location_offset.y, 1)
+        self.assertEquals(dataset1.location_offset.z, 2)
+
+        self.assertEquals(dataset1.data_source.processing_script, script_contents)
 
         datasets = self.ingester_platform.findDatasets()
         self.assertEquals(1, len(datasets))
@@ -306,10 +307,12 @@ class TestIngesterPersistence(unittest.TestCase):
         
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         unit.insert(loc)
-
+ 
         file_schema = DataEntrySchema()
         file_schema.addAttr(FileDataType("file"))
-        file_schema = self.ingester_platform.post(file_schema)
+        file_schema_id = unit.insert(file_schema)
+
+        self.assertIsNotNone(file_schema_id, "Schema ID should not be null")
 
         dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
         unit.insert(dataset)
@@ -471,6 +474,7 @@ class TestIngesterFunctionality(unittest.TestCase):
 #                    print "Exception: ", str(sys.exc_info())
 
 class TestMarshaller(unittest.TestCase):
+    """Test marshalling and object round tripping"""
     def setUp(self):
         unittest.TestCase.setUp(self)
         self.marshaller = Marshaller()
@@ -492,6 +496,40 @@ class TestMarshaller(unittest.TestCase):
         self.assertEquals("two", schema_obj.attrs["two"].name)
         self.assertTrue(isinstance(schema_obj.attrs["one"], Double))
         self.assertTrue(isinstance(schema_obj.attrs["two"], String))
+
+    def test_dataset_roundtrip(self):
+        """Attempt to round trip a dataset object"""
+        script_contents = """Some Script
+More"""
+        
+        dataset = Dataset(1, 2, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", processing_script=script_contents), location_offset=LocationOffset(0, 1, 2))
+
+        dataset_dict = self.marshaller.obj_to_dict(dataset)
+        dataset1 = self.marshaller.dict_to_obj(dataset_dict)
+
+        self.assertIsNotNone(dataset1, "Dataset should not be none")
+        self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
+        self.assertEquals(dataset1.schema, dataset.schema, "schema does not match %d!=%d"%(dataset1.schema, dataset.schema))
+        self.assertEquals(dataset1.location_offset.x, 0)
+        self.assertEquals(dataset1.location_offset.y, 1)
+        self.assertEquals(dataset1.location_offset.z, 2)
+
+    def test_data_entry(self):
+        dt = datetime.datetime.utcfromtimestamp(1357788112)
+        dt = dt.replace(tzinfo = jcudc24ingesterapi.UTC)
+        
+        data_entry = DataEntry(1, dt)
+        data_entry["temp"] = 1.2
+        
+        data_entry_dto = self.marshaller.obj_to_dict(data_entry)
+        self.assertEquals("2013-01-10T03:21:52.000Z", data_entry_dto["timestamp"])
+        self.assertEquals(1, data_entry_dto["dataset"])
+        self.assertEquals(1.2, data_entry_dto["data"]["temp"])
+
+        data_entry_return = self.marshaller.dict_to_obj(data_entry_dto)
+        self.assertEquals(data_entry.timestamp, data_entry_return.timestamp)
+        self.assertEquals(data_entry.dataset, data_entry_return.dataset)
+        self.assertEquals(data_entry.data["temp"], data_entry_return.data["temp"])
 
 if __name__ == '__main__':
     unittest.main()
