@@ -7,3 +7,4 @@ eggs
 develop-eggs
 parts
 *.iml
+jcu.dc24.ingesterapi.iml
