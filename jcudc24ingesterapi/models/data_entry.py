@@ -45,3 +45,14 @@ class DataEntry(APIDomainObject):
         del self.data[item]
 
 
+class FileObject(object):
+    """This object references a file on disk that is to be downloaded
+    """
+    __xmlrpc_class__ = "file"
+    
+    mime_type = typed("_mime_type", str, "The mime type of the file")
+    
+    def __init__(self, f_handle, mime_type=None):
+        self.f_handle = f_handle
+        self.mime_type = mime_type
+        
