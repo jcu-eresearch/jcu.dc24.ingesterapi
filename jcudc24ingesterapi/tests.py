@@ -1,6 +1,7 @@
 import datetime
 import jcudc24ingesterapi
 import os
+import os.path
 import unittest
 import sys
 import tempfile
@@ -9,7 +10,7 @@ from jcudc24ingesterapi.models.dataset import Dataset
 from jcudc24ingesterapi.models.locations import Location, Region, LocationOffset
 from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
 from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
-from jcudc24ingesterapi.models.data_entry import DataEntry
+from jcudc24ingesterapi.models.data_entry import DataEntry, FileObject
 from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marshaller
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
 from jcudc24ingesterapi.models.metadata import MetadataEntry
@@ -43,7 +44,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         loc3 = Location(12.0, 11.0, "Test Site", 100)
 
         temperature_schema = DataEntrySchema()
-        temperature_schema.addAttr(Double("Temperature"))   
+        temperature_schema.addAttr(Double("temperature"))   
         temperature_schema = self.ingester_platform.post(temperature_schema)
         
         file_schema = DataEntrySchema()
@@ -74,11 +75,6 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         dataset2.location = loc2.id
         work.post(dataset2)
 
-#        loc3.region = project_region.id
-#        work.post(loc3)
-#        dataset3.location = loc3.id
-#        work.post(dataset3)
-
         work.commit()
 
         # Region, location and dataset id's will be saved to the project within the provisioning system in some way
@@ -90,13 +86,18 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         found_dataset_id = dataset1.id                  # The dataset that has an extended file schema
 
 #       User manually enters data
-        data_entry = DataEntry(found_dataset_id, datetime.datetime.now())
-        data_entry['temperature'] = 27.8                # Add the extended schema items
-        data_entry['mime_type'] = "text/xml"
-        data_entry['file_handle'] = "file://c:/test_file.txt"
+        data_entry_1 = DataEntry(found_dataset_id, datetime.datetime.now())
+        data_entry_1['temperature'] = 27.8                # Add the extended schema items
+        data_entry_1 = self.ingester_platform.post(data_entry_1)
+        self.assertIsNotNone(data_entry_1.id)
 
-        data_entry = self.ingester_platform.post(data_entry)
-        self.assertNotNone(data_entry.id)
+        work = self.ingester_platform.createUnitOfWork()
+        data_entry_2 = DataEntry(dataset2.id, datetime.datetime.now())
+        data_entry_2['file'] = FileObject(open(os.path.join(
+                    os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml")), "text/xml")
+        work.post(data_entry_2)
+        work.commit()
+        self.assertIsNotNone(data_entry_2.id)
 
 #       User enters quality assurance metadata
         quality_metadata_schema = DatasetMetadataSchema()
@@ -105,7 +106,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         quality_metadata_schema.addAttr(Double("value"))
         quality_metadata_schema = self.ingester_platform.post(quality_metadata_schema)
         
-        entered_metadata = MetadataEntry(data_entry.data_entry_id, quality_metadata_schema)
+        entered_metadata = MetadataEntry(data_entry_1.data_entry_id, quality_metadata_schema)
         entered_metadata['unit'] = "%"
         entered_metadata['description'] = "Percent error"
         entered_metadata['value'] = 0.98
@@ -530,6 +531,15 @@ More"""
         self.assertEquals(data_entry.timestamp, data_entry_return.timestamp)
         self.assertEquals(data_entry.dataset, data_entry_return.dataset)
         self.assertEquals(data_entry.data["temp"], data_entry_return.data["temp"])
+
+    def test_file_object_roundtrip(self):
+        """The file object should marshall everything but the file stream"""
+        data_entry = DataEntry(1)
+        data_entry["temp"] = FileObject(os.path.join(
+                    os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml"), "text/xml")
+        
+        data_entry_dto = self.marshaller.obj_to_dict(data_entry)
+        self.assertEqual("text/xml", data_entry_dto["data"]["temp"]["mime_type"])
 
 if __name__ == '__main__':
     unittest.main()

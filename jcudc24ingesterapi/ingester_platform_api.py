@@ -2,6 +2,8 @@ __author__ = 'Casey Bajema'
 import xmlrpclib
 import inspect
 import datetime
+import httplib
+import urlparse
 
 from jcudc24ingesterapi import parse_timestamp, format_timestamp
 import jcudc24ingesterapi.models.dataset
@@ -12,6 +14,7 @@ import jcudc24ingesterapi.models.data_entry
 import jcudc24ingesterapi.schemas.metadata_schemas
 import jcudc24ingesterapi.schemas.data_entry_schemas
 import jcudc24ingesterapi.schemas.data_types
+from jcudc24ingesterapi.models.data_entry import FileObject
 
 class Marshaller(object):
     """A Marshaller object is responsible for converting between real objects
@@ -42,6 +45,8 @@ class Marshaller(object):
     def obj_to_dict(self, obj):
         """Maps an object of base class BaseManagementObject to a dict.
         """
+        if type(obj) in (str, int, float, unicode, bool, type(None), tuple):
+            return obj
         if not self._classes.has_key(type(obj)):
             raise ValueError("This object class is not supported: " + str(obj.__class__))
         ret = {}
@@ -60,10 +65,12 @@ class Marshaller(object):
                 v = getattr(obj, k)
                 if type(v) == datetime.datetime:
                     ret[k] = format_timestamp(v)
-                elif type(v) not in (str, int, float, unicode, dict, bool, type(None), tuple):
-                    ret[k] = self.obj_to_dict(v)
+                elif type(v) == dict:
+                    ret[k] = {}
+                    for k1 in v:
+                        ret[k][k1] = self.obj_to_dict(v[k1])
                 else:
-                    ret[k] = v
+                    ret[k] = self.obj_to_dict(v)
         ret["class"] = self._classes[type(obj)]
         return ret
 
@@ -129,6 +136,7 @@ class IngesterPlatformAPI(object):
         """
         if not service_url.startswith("http://") and not service_url.startswith("https://"):
             raise ValueError("Invalid server URL specified")
+        self.service_url = service_url
         self.server = xmlrpclib.ServerProxy(service_url, allow_none=True)
         self.auth = auth
         self._marshaller = Marshaller()
@@ -182,13 +190,45 @@ class IngesterPlatformAPI(object):
         :param unit: Unit of work which is going to be committed
         :return: No return
         """
-        
+        to_upload = []
         unit_dto = {"delete":[],
-                    "update":[self._marshaller.obj_to_dict(obj) for obj in unit._to_update],
-                    "insert":[self._marshaller.obj_to_dict(obj) for obj in unit._to_insert]}
+                    "update":[],
+                    "insert":[]}
+        
+        for obj in unit._to_update:
+            obj_dict = self._marshaller.obj_to_dict(obj)
+            unit_dto["update"].append(obj_dict)
+            
+            if not hasattr(obj, "data"): continue
+            for k in obj.data:
+                val = obj.data[k]
+                if not isinstance(val, FileObject): continue
+                to_upload.append( (obj.id, obj_dict["class"], val) )
+
+        for obj in unit._to_insert:
+            obj_dict = self._marshaller.obj_to_dict(obj)
+            unit_dto["insert"].append(obj_dict)
+            if not hasattr(obj, "data"): continue
+            for k in obj.data:
+                val = obj.data[k]
+                if not isinstance(val, FileObject): continue
+                to_upload.append( ( "%s:%d"%(obj_dict["class"],obj.id), k, val) )
         
         transaction_id = self.server.precommit(unit_dto)
         # do uploads
+        
+        (proto, host, path, params, query, frag) = urlparse.urlparse(self.service_url)
+        c = httplib.HTTPConnection(host)
+        for oid, attr, file_obj in to_upload:
+            c.request('POST', "%s/%s/%s/%s"%(path, transaction_id, oid, attr), file_obj.f_handle, 
+                      {"Content-Type":"application/octet-stream"})
+            r = c.getresponse()
+            r.close()
+            if r.status != 200:
+                raise Exception("Error uploading data files")
+            file_obj.f_handle.close()
+        c.close()
+        
         results = self.server.commit(transaction_id)
         
         lookup = {}
