@@ -8,6 +8,7 @@ import jcudc24ingesterapi.models.dataset
 import jcudc24ingesterapi.models.locations
 import jcudc24ingesterapi.models.sampling
 import jcudc24ingesterapi.models.data_sources
+import jcudc24ingesterapi.models.data_entry
 import jcudc24ingesterapi.schemas.metadata_schemas
 import jcudc24ingesterapi.schemas.data_entry_schemas
 import jcudc24ingesterapi.schemas.data_types
