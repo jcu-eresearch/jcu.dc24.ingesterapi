@@ -28,6 +28,7 @@ class Marshaller(object):
         self.scanPackage(jcudc24ingesterapi.models.sampling)
         self.scanPackage(jcudc24ingesterapi.models.data_sources)
         self.scanPackage(jcudc24ingesterapi.models.data_entry)
+        self.scanPackage(jcudc24ingesterapi.models.metadata)
         self.scanPackage(jcudc24ingesterapi.schemas.metadata_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_entry_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_types)
@@ -173,7 +174,7 @@ class IngesterPlatformAPI(object):
         :param ingester_object: If the passed in object doesn't have it's ID set an exception will be thrown.
         :return: The updated object (eg. :return == ingester_object should always be true on success).
         """
-        pass
+        return self._marshaller.dict_to_obj(self.server.update(self._marshaller.obj_to_dict(ingester_object)))
 
     def delete(self, ingester_object):
         """
@@ -192,7 +193,9 @@ class IngesterPlatformAPI(object):
         to_upload = []
         unit_dto = {"delete":[],
                     "update":[],
-                    "insert":[]}
+                    "insert":[],
+                    "enable":[],
+                    "disable":[]}
         
         for obj in unit._to_update:
             obj_dict = self._marshaller.obj_to_dict(obj)
@@ -212,6 +215,9 @@ class IngesterPlatformAPI(object):
                 val = obj.data[k]
                 if not isinstance(val, FileObject): continue
                 to_upload.append( ( "%s:%d"%(obj_dict["class"],obj.id), k, val) )
+        
+        unit_dto["enable"] = unit._to_enable
+        unit_dto["disable"] = unit._to_disable
         
         transaction_id = self.server.precommit(unit_dto)
         # do uploads
@@ -297,6 +303,8 @@ class UnitOfWork(object):
         self._to_insert = []
         self._to_update = []
         self._to_delete = []
+        self._to_enable = []
+        self._to_disable = []
         self._next = -1
         
     def post(self, ingester_object):
@@ -327,7 +335,13 @@ class UnitOfWork(object):
 
     def delete(self, ingester_object):
         self._to_delete.append(ingester_object)
-    
+
+    def enable(self, ingester_object_id):
+        self._to_enable.append(ingester_object_id)
+        
+    def disable(self, ingester_object_id):
+        self._to_disable.append(ingester_object_id)
+
     def commit(self):
         """Commit this unit of work using the original service instance.
         """

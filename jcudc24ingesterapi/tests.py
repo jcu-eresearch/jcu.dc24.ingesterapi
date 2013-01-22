@@ -13,7 +13,7 @@ from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSourc
 from jcudc24ingesterapi.models.data_entry import DataEntry, FileObject
 from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marshaller
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
-from jcudc24ingesterapi.models.metadata import MetadataEntry
+from jcudc24ingesterapi.models.metadata import DatasetMetadataEntry
 from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
 from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling, CustomSampling
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
@@ -106,7 +106,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         quality_metadata_schema.addAttr(Double("value"))
         quality_metadata_schema = self.ingester_platform.post(quality_metadata_schema)
         
-        entered_metadata = MetadataEntry(data_entry_1.data_entry_id, quality_metadata_schema)
+        entered_metadata = DatasetMetadataEntry(data_entry_1.dataset, quality_metadata_schema.id)
         entered_metadata['unit'] = "%"
         entered_metadata['description'] = "Percent error"
         entered_metadata['value'] = 0.98
@@ -143,6 +143,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         new_data_source = PullDataSource("http://test.com/new_data", "file_handle")
         dataset1.data_source = new_data_source
         dataset1 = self.ingester_platform.post(dataset1)
+        self.assertNotEqual(None, dataset1)
 
 #       External, 3rd party searches for data
         # TODO: external 3rd parties should be able to use the api to get data without authentication
@@ -150,14 +151,14 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
 #       Project is disabled/finished
         work = self.ingester_platform.createUnitOfWork()
-        work.disable(dataset1)
-        work.disable(dataset2)
+        work.disable(dataset1.id)
+        work.disable(dataset2.id)
         work.commit()
 
 #       Project is obsolete and data should be deleted
         work = self.ingester_platform.createUnitOfWork()
-        work.delete(dataset1)
-        work.delete(dataset2)
+        work.delete(dataset1.id)
+        work.delete(dataset2.id)
         work.commit()
 
     def testMultiDatasetExtraction(self):

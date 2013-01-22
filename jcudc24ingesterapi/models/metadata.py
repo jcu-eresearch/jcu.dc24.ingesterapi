@@ -1,8 +1,9 @@
 from jcudc24ingesterapi.ingester_exceptions import UnknownParameterError
+from jcudc24ingesterapi import typed, APIDomainObject
 
 __author__ = 'Casey Bajema'
 
-class MetadataEntry(dict):
+class MetadataEntry(APIDomainObject):
     """
     Metadata class that provides further information about a single object, this could be a data_entry,
     dataset or any other stored object.
@@ -12,15 +13,31 @@ class MetadataEntry(dict):
 
     The kwargs parameters must conform to the calibration schema or an exception will be thrown on initialisation.
     """
+    id = typed("_id", int, "An identifier for the data entry")
+    object_id = typed("_object_id", int, "An identifier for the object data entry")
+    metadata_schema = typed("_dataset", int, "The dataset ID")
+    data = typed("_data", dict, "Data storage")
 
-    def __init__(self, ingester_object = None, metadata_schema = None, metadata_id=None, **kwargs):
-        self.metadata_id = metadata_id
-        self.ingester_object = ingester_object
-        self.metadata_schema = metadata_schema
+    def __init__(self, object_id = None, metadata_schema_id=None, id = None, **kwargs):
+        self.id = id
+        self.object_id = object_id
+        self.metadata_schema = metadata_schema_id
 
-        # Push the kwargs to fields
-        for key in metadata_schema.attrs.keys():
-            self[key] = kwargs.pop(key, None)
+        self.data = {}
 
         for key, value in kwargs:
             raise UnknownParameterError(key, value)
+
+    def __getitem__(self, item):
+        return self.data[item]
+    def __setitem__(self, item, value):
+        self.data[item] = value
+    def __delitem__(self, item):
+        del self.data[item]
+        
+class DatasetMetadataEntry(MetadataEntry):
+    __xmlrpc_class__ = "dataset_metadata_entry"
+
+class DataEntryMetdataEntry(MetadataEntry):
+    __xmlrpc_class__ = "data_entry_metadata_entry"
+    
