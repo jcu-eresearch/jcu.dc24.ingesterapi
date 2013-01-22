@@ -272,6 +272,9 @@ class TestIngesterPersistence(unittest.TestCase):
         self.assertEqual(loc.longitude, loc1.longitude, "longitude does not match")
         self.assertEqual(loc.elevation, loc1.elevation, "elevation does not match")
         self.assertEqual(loc.name, loc1.name, "name does not match")
+        
+        locs = self.ingester_platform.search("location")
+        self.assertEquals(1, len(locs))
 
     def test_dataset_persistence(self):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
@@ -303,7 +306,12 @@ More"""
         datasets = self.ingester_platform.findDatasets(location=loc.id)
         self.assertEquals(1, len(datasets))
 
+        data_entry_schemas = self.ingester_platform.search("data_entry_schema")
+        self.assertEquals(1, len(data_entry_schemas))
 
+        datasets = self.ingester_platform.search("dataset")
+        self.assertEquals(1, len(datasets))
+        
     def test_unit_of_work_persistence(self):
         unit = self.ingester_platform.createUnitOfWork()
         

@@ -184,6 +184,9 @@ class IngesterPlatformAPI(object):
         :return: The object that has been deleted, this should have all fields set.
         """
         pass
+    
+    def search(self, object_type, criteria=None):
+        return self._marshaller.dict_to_obj(self.server.search(object_type, self._marshaller.obj_to_dict(criteria)))
 
     def commit(self, unit):
         """Commit a unit of work
