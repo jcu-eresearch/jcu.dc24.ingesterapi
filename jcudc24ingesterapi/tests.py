@@ -181,6 +181,26 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_dataset = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
 
 
+    def test_listeners(self):
+        # Use a list to beat the closure
+        called = [False] 
+        
+        def loc_listener(obj, var, value):
+            # The listener will be called when the object is posted
+            # and when it is committed, so we want to filter out the 
+            # post call
+            if var == "_id" and value > 0:
+                called.remove(False)
+                called.append(True)
+        
+        loc = Location()
+        loc.set_listener(loc_listener)
+
+        work = self.ingester_platform.createUnitOfWork()
+        work.post(loc)
+        work.commit()
+
+        self.assertTrue(called[0])
 
 
     def tearDown(self):
@@ -203,7 +223,7 @@ class TestIngesterModels(unittest.TestCase):
         pass
 
     def test_listeners(self):
-        # Use a list ot beat the closure
+        # Use a list to beat the closure
         called = [False] 
         
         def loc_listener(obj, var, value):
@@ -218,7 +238,6 @@ class TestIngesterModels(unittest.TestCase):
         loc.id = 1
         self.assertTrue(called[0])
         
-
 #    def test_ingester_platform(self):
 #        self.ingester_platform = IngesterPlatformAPI()
 #        dataset = self.ingester_platform.post(self.auth, self.dataset)
@@ -275,6 +294,16 @@ class TestIngesterPersistence(unittest.TestCase):
         
         locs = self.ingester_platform.search("location")
         self.assertEquals(1, len(locs))
+        
+        # Now update the location
+        loc1.name = "The Test Site"
+        loc1.latitude = -19.0
+        loc2 = self.ingester_platform.post(loc1)
+        self.assertEqual(loc1.id, loc2.id, "")
+        self.assertEqual(loc1.latitude, loc2.latitude, "latitude does not match")
+        self.assertEqual(loc1.longitude, loc2.longitude, "longitude does not match")
+        self.assertEqual(loc1.elevation, loc2.elevation, "elevation does not match")
+        self.assertEqual(loc1.name, loc2.name, "name does not match")        
 
     def test_dataset_persistence(self):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
@@ -305,7 +334,7 @@ More"""
 
         datasets = self.ingester_platform.findDatasets(location=loc.id)
         self.assertEquals(1, len(datasets))
-
+        
         data_entry_schemas = self.ingester_platform.search("data_entry_schema")
         self.assertEquals(1, len(data_entry_schemas))
 

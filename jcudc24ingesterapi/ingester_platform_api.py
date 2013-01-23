@@ -75,17 +75,22 @@ class Marshaller(object):
         ret["class"] = self._classes[type(obj)]
         return ret
 
-    def dict_to_obj(self, x):
+    def dict_to_obj(self, x, obj=None):
         """Maps a dict back to an object, created based on the 'class' element.
+        
+        :param x: 
+        :param obj: an optional object to use as the destination
         """
         if isinstance(x, list):
             return [self.dict_to_obj(obj) for obj in x]
         if not x.has_key("class"):
             raise ValueError("There is no class element")
-        try:
-            obj = self._class_factories[x["class"]]()
-        except TypeError, e:
-            raise TypeError(e.message + " for " + x["class"], *e.args[1:])
+        
+        if obj == None:
+            try:
+                obj = self._class_factories[x["class"]]()
+            except TypeError, e:
+                raise TypeError(e.message + " for " + x["class"], *e.args[1:])
 
         # Create a dict of the properties, and the valid types allowed
         data_keys = dict([ (k,v.fset.valid_types if v.fset != None and hasattr(v.fset, "valid_types") else []) for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)])
@@ -241,13 +246,13 @@ class IngesterPlatformAPI(object):
         results = self.server.commit(transaction_id)
         
         lookup = {}
-        for result in results: lookup[result["correlationid"]] = self._marshaller.dict_to_obj(result)
+        for result in results: lookup[result["correlationid"]] = result
         for obj in unit._to_update:
             if obj.id not in lookup: continue
-            obj.__dict__ = lookup[obj.id].__dict__.copy()
+            self._marshaller.dict_to_obj(lookup[obj.id], obj)
         for obj in unit._to_insert:
             if obj.id not in lookup: continue
-            obj.__dict__ = lookup[obj.id].__dict__.copy()
+            self._marshaller.dict_to_obj(lookup[obj.id], obj)
 
     def enableDataset(self, dataset_id):
         """
