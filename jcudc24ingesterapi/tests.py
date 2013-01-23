@@ -181,6 +181,26 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_dataset = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
 
 
+    def test_listeners(self):
+        # Use a list to beat the closure
+        called = [False] 
+        
+        def loc_listener(obj, var, value):
+            # The listener will be called when the object is posted
+            # and when it is committed, so we want to filter out the 
+            # post call
+            if var == "_id" and value > 0:
+                called.remove(False)
+                called.append(True)
+        
+        loc = Location()
+        loc.set_listener(loc_listener)
+
+        work = self.ingester_platform.createUnitOfWork()
+        work.post(loc)
+        work.commit()
+
+        self.assertTrue(called[0])
 
 
     def tearDown(self):
@@ -203,7 +223,7 @@ class TestIngesterModels(unittest.TestCase):
         pass
 
     def test_listeners(self):
-        # Use a list ot beat the closure
+        # Use a list to beat the closure
         called = [False] 
         
         def loc_listener(obj, var, value):
@@ -218,7 +238,6 @@ class TestIngesterModels(unittest.TestCase):
         loc.id = 1
         self.assertTrue(called[0])
         
-
 #    def test_ingester_platform(self):
 #        self.ingester_platform = IngesterPlatformAPI()
 #        dataset = self.ingester_platform.post(self.auth, self.dataset)
