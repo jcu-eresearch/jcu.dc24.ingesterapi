@@ -29,6 +29,7 @@ class Marshaller(object):
         self.scanPackage(jcudc24ingesterapi.models.sampling)
         self.scanPackage(jcudc24ingesterapi.models.data_sources)
         self.scanPackage(jcudc24ingesterapi.models.data_entry)
+        self.scanPackage(jcudc24ingesterapi.models.metadata)
         self.scanPackage(jcudc24ingesterapi.schemas.metadata_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_entry_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_types)
@@ -74,17 +75,22 @@ class Marshaller(object):
         ret["class"] = self._classes[type(obj)]
         return ret
 
-    def dict_to_obj(self, x):
+    def dict_to_obj(self, x, obj=None):
         """Maps a dict back to an object, created based on the 'class' element.
+        
+        :param x: 
+        :param obj: an optional object to use as the destination
         """
         if isinstance(x, list):
             return [self.dict_to_obj(obj) for obj in x]
         if not x.has_key("class"):
             raise ValueError("There is no class element")
-        try:
-            obj = self._class_factories[x["class"]]()
-        except TypeError, e:
-            raise TypeError(e.message + " for " + x["class"], *e.args[1:])
+        
+        if obj == None:
+            try:
+                obj = self._class_factories[x["class"]]()
+            except TypeError, e:
+                raise TypeError(e.message + " for " + x["class"], *e.args[1:])
 
         # Create a dict of the properties, and the valid types allowed
         data_keys = dict([ (k,v.fset.valid_types if v.fset != None and hasattr(v.fset, "valid_types") else []) for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)])
@@ -174,7 +180,7 @@ class IngesterPlatformAPI(object):
         :param ingester_object: If the passed in object doesn't have it's ID set an exception will be thrown.
         :return: The updated object (eg. :return == ingester_object should always be true on success).
         """
-        pass
+        return self._marshaller.dict_to_obj(self.server.update(self._marshaller.obj_to_dict(ingester_object)))
 
     def delete(self, ingester_object):
         """
@@ -184,6 +190,9 @@ class IngesterPlatformAPI(object):
         :return: The object that has been deleted, this should have all fields set.
         """
         pass
+    
+    def search(self, object_type, criteria=None):
+        return self._marshaller.dict_to_obj(self.server.search(object_type, self._marshaller.obj_to_dict(criteria)))
 
     def commit(self, unit):
         """Commit a unit of work
@@ -193,7 +202,9 @@ class IngesterPlatformAPI(object):
         to_upload = []
         unit_dto = {"delete":[],
                     "update":[],
-                    "insert":[]}
+                    "insert":[],
+                    "enable":[],
+                    "disable":[]}
         
         for obj in unit._to_update:
             obj_dict = self._marshaller.obj_to_dict(obj)
@@ -214,6 +225,9 @@ class IngesterPlatformAPI(object):
                 if not isinstance(val, FileObject): continue
                 to_upload.append( ( "%s:%d"%(obj_dict["class"],obj.id), k, val) )
         
+        unit_dto["enable"] = unit._to_enable
+        unit_dto["disable"] = unit._to_disable
+        
         transaction_id = self.server.precommit(unit_dto)
         # do uploads
         
@@ -232,13 +246,13 @@ class IngesterPlatformAPI(object):
         results = self.server.commit(transaction_id)
         
         lookup = {}
-        for result in results: lookup[result["correlationid"]] = self._marshaller.dict_to_obj(result)
+        for result in results: lookup[result["correlationid"]] = result
         for obj in unit._to_update:
             if obj.id not in lookup: continue
-            obj.__dict__ = lookup[obj.id].__dict__.copy()
+            self._marshaller.dict_to_obj(lookup[obj.id], obj)
         for obj in unit._to_insert:
             if obj.id not in lookup: continue
-            obj.__dict__ = lookup[obj.id].__dict__.copy()
+            self._marshaller.dict_to_obj(lookup[obj.id], obj)
 
     def enableDataset(self, dataset_id):
         """
@@ -298,6 +312,8 @@ class UnitOfWork(object):
         self._to_insert = []
         self._to_update = []
         self._to_delete = []
+        self._to_enable = []
+        self._to_disable = []
         self._next = -1
         
     def post(self, ingester_object):
@@ -328,7 +344,13 @@ class UnitOfWork(object):
 
     def delete(self, ingester_object):
         self._to_delete.append(ingester_object)
-    
+
+    def enable(self, ingester_object_id):
+        self._to_enable.append(ingester_object_id)
+        
+    def disable(self, ingester_object_id):
+        self._to_disable.append(ingester_object_id)
+
     def commit(self):
         """Commit this unit of work using the original service instance.
         """

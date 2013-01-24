@@ -13,7 +13,7 @@ from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSourc
 from jcudc24ingesterapi.models.data_entry import DataEntry, FileObject
 from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marshaller
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
-from jcudc24ingesterapi.models.metadata import MetadataEntry
+from jcudc24ingesterapi.models.metadata import DatasetMetadataEntry
 from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
 from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling, CustomSampling
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
@@ -106,7 +106,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         quality_metadata_schema.addAttr(Double("value"))
         quality_metadata_schema = self.ingester_platform.post(quality_metadata_schema)
         
-        entered_metadata = MetadataEntry(data_entry_1.data_entry_id, quality_metadata_schema)
+        entered_metadata = DatasetMetadataEntry(data_entry_1.dataset, quality_metadata_schema.id)
         entered_metadata['unit'] = "%"
         entered_metadata['description'] = "Percent error"
         entered_metadata['value'] = 0.98
@@ -143,6 +143,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         new_data_source = PullDataSource("http://test.com/new_data", "file_handle")
         dataset1.data_source = new_data_source
         dataset1 = self.ingester_platform.post(dataset1)
+        self.assertNotEqual(None, dataset1)
 
 #       External, 3rd party searches for data
         # TODO: external 3rd parties should be able to use the api to get data without authentication
@@ -150,14 +151,14 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
 #       Project is disabled/finished
         work = self.ingester_platform.createUnitOfWork()
-        work.disable(dataset1)
-        work.disable(dataset2)
+        work.disable(dataset1.id)
+        work.disable(dataset2.id)
         work.commit()
 
 #       Project is obsolete and data should be deleted
         work = self.ingester_platform.createUnitOfWork()
-        work.delete(dataset1)
-        work.delete(dataset2)
+        work.delete(dataset1.id)
+        work.delete(dataset2.id)
         work.commit()
 
     def testMultiDatasetExtraction(self):
@@ -180,6 +181,26 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_dataset = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
 
 
+    def test_listeners(self):
+        # Use a list to beat the closure
+        called = [False] 
+        
+        def loc_listener(obj, var, value):
+            # The listener will be called when the object is posted
+            # and when it is committed, so we want to filter out the 
+            # post call
+            if var == "_id" and value > 0:
+                called.remove(False)
+                called.append(True)
+        
+        loc = Location()
+        loc.set_listener(loc_listener)
+
+        work = self.ingester_platform.createUnitOfWork()
+        work.post(loc)
+        work.commit()
+
+        self.assertTrue(called[0])
 
 
     def tearDown(self):
@@ -202,7 +223,7 @@ class TestIngesterModels(unittest.TestCase):
         pass
 
     def test_listeners(self):
-        # Use a list ot beat the closure
+        # Use a list to beat the closure
         called = [False] 
         
         def loc_listener(obj, var, value):
@@ -217,7 +238,6 @@ class TestIngesterModels(unittest.TestCase):
         loc.id = 1
         self.assertTrue(called[0])
         
-
 #    def test_ingester_platform(self):
 #        self.ingester_platform = IngesterPlatformAPI()
 #        dataset = self.ingester_platform.post(self.auth, self.dataset)
@@ -271,6 +291,19 @@ class TestIngesterPersistence(unittest.TestCase):
         self.assertEqual(loc.longitude, loc1.longitude, "longitude does not match")
         self.assertEqual(loc.elevation, loc1.elevation, "elevation does not match")
         self.assertEqual(loc.name, loc1.name, "name does not match")
+        
+        locs = self.ingester_platform.search("location")
+        self.assertEquals(1, len(locs))
+        
+        # Now update the location
+        loc1.name = "The Test Site"
+        loc1.latitude = -19.0
+        loc2 = self.ingester_platform.post(loc1)
+        self.assertEqual(loc1.id, loc2.id, "")
+        self.assertEqual(loc1.latitude, loc2.latitude, "latitude does not match")
+        self.assertEqual(loc1.longitude, loc2.longitude, "longitude does not match")
+        self.assertEqual(loc1.elevation, loc2.elevation, "elevation does not match")
+        self.assertEqual(loc1.name, loc2.name, "name does not match")        
 
     def test_dataset_persistence(self):
         loc = Location(10.0, 11.0, "Test Site", 100, None)
@@ -301,8 +334,13 @@ More"""
 
         datasets = self.ingester_platform.findDatasets(location=loc.id)
         self.assertEquals(1, len(datasets))
+        
+        data_entry_schemas = self.ingester_platform.search("data_entry_schema")
+        self.assertEquals(1, len(data_entry_schemas))
 
-
+        datasets = self.ingester_platform.search("dataset")
+        self.assertEquals(1, len(datasets))
+        
     def test_unit_of_work_persistence(self):
         unit = self.ingester_platform.createUnitOfWork()
         
