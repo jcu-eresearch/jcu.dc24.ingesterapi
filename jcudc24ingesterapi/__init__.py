@@ -1,3 +1,6 @@
+import pkg_resources
+pkg_resources.declare_namespace(__name__)
+
 __author__ = 'Casey Bajema'
 
 import time
@@ -24,7 +27,7 @@ def setter(attr, valid_types):
         valid_types = (valid_types,)
     def setter_real(self, var):
         if var != None and \
-                not isinstance(var, valid_types): raise TypeError("%s Not of required type: %s"%(str(type(var)), str(valid_types)))
+                not isinstance(var, valid_types): raise TypeError("%s Not of required type %s for %s"%(str(type(var)), str(valid_types), attr))
         setattr(self,attr,var)
         if hasattr(self, "_listener") and inspect.isfunction(getattr(self, "_listener")):
             func = getattr(self, "_listener")

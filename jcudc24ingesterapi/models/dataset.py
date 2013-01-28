@@ -14,9 +14,9 @@ class Dataset(APIDomainObject):
     schema = typed("_schema", int, "ID of schema for dataset")
     data_source = typed("_data_source", _DataSource, "Data source used for ingesting")
     location_offset = typed("_location_offset", LocationOffset, "Offset from the locations frame of reference")
-    redbox_uri = typed("_redbox_uri", str, "Redbox URI")
+    redbox_uri = typed("_redbox_uri", (str,unicode), "Redbox URI")
     enabled = typed("_enabled", bool, "Dataset enabled")
-    description = typed("_description", str, "Description of dataset")
+    description = typed("_description", (str,unicode), "Description of dataset")
 
     def __init__(self, location = None, schema = None, data_source = None, sampling=None, redbox_uri = None, location_offset = None):
         self.id = None
