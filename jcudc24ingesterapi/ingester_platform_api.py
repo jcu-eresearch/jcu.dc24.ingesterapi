@@ -16,6 +16,10 @@ import jcudc24ingesterapi.schemas.data_entry_schemas
 import jcudc24ingesterapi.schemas.data_types
 from jcudc24ingesterapi.models.data_entry import FileObject
 
+def get_properties(obj):
+    """Returns a list of valid property names for this object"""
+    return [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
+
 class Marshaller(object):
     """A Marshaller object is responsible for converting between real objects
     and dicts. This is used as a helper for the XMLRPC service.
@@ -44,6 +48,9 @@ class Marshaller(object):
                 self._classes[cls] = cls.__xmlrpc_class__
                 self._class_factories[cls.__xmlrpc_class__] = cls
 
+    def class_for(self, klass):
+        return self._class_factories[klass]
+
     def obj_to_dict(self, obj, special_attrs=[]):
         """Maps an object of base class BaseManagementObject to a dict.
         """
@@ -63,7 +70,7 @@ class Marshaller(object):
             if hasattr(obj, "id"):
                 ret["id"] = obj.id
         else:
-            data_keys = [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
+            data_keys = get_properties(obj)
 
             for k in data_keys:
                 v = getattr(obj, k)
@@ -108,7 +115,7 @@ class Marshaller(object):
                 continue
             elif k == "attributes" and x["class"].endswith("_schema"):
                 for attr in x["attributes"]:
-                    obj.addAttr(self._class_factories[attr["class"]](attr["name"], 
+                    obj.addAttr(self.class_for(attr["class"])(attr["name"], 
                                 description=attr["description"], units=attr["units"]))
 #                    setattr(obj, k2, self._class_factories[x["attributes"][k2]]())
             elif k not in data_keys:
