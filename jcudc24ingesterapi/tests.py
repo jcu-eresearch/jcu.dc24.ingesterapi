@@ -11,7 +11,8 @@ from jcudc24ingesterapi.models.locations import Location, Region, LocationOffset
 from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
 from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
 from jcudc24ingesterapi.models.data_entry import DataEntry, FileObject
-from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marshaller
+from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marshaller,\
+    UnitOfWork
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
 from jcudc24ingesterapi.models.metadata import DatasetMetadataEntry
 from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
@@ -341,12 +342,18 @@ More"""
         datasets = self.ingester_platform.search("dataset")
         self.assertEquals(1, len(datasets))
         
+    def test_schema_persistence(self):
+        file_schema = DataEntrySchema()
+        file_schema.addAttr(FileDataType("file"))
+        self.ingester_platform.post(file_schema)
+        
     def test_unit_of_work_persistence(self):
         unit = self.ingester_platform.createUnitOfWork()
         
         loc = Location(10.0, 11.0, "Test Site", 100, None)
         unit.insert(loc)
- 
+        self.assertIsNotNone(loc.id)
+        
         file_schema = DataEntrySchema()
         file_schema.addAttr(FileDataType("file"))
         file_schema_id = unit.insert(file_schema)
@@ -578,6 +585,30 @@ More"""
         
         data_entry_dto = self.marshaller.obj_to_dict(data_entry)
         self.assertEqual("text/xml", data_entry_dto["data"]["temp"]["mime_type"])
+
+    def test_unit_of_work_roundtrip(self):
+        unit = UnitOfWork(None)
+        loc = Location(10, 11)
+        unit.insert(loc)
+        unit_dict = self.marshaller.obj_to_dict(unit)
+        self.assertEquals("unit_of_work", unit_dict["class"])
+        
+        unit2 = self.marshaller.dict_to_obj(unit_dict)
+        self.assertEquals(10.0, unit2._to_insert[0].latitude)
+        self.assertEquals(11.0, unit2._to_insert[0].longitude)
+
+    def test_special_attr(self):
+        loc = Location(10, 11)
+        loc.correlationid = -1
+        loc_dict = self.marshaller.obj_to_dict([loc], special_attrs=["correlationid"])
+        
+        self.assertEquals(1, len(loc_dict))
+        self.assertEquals(-1, loc_dict[0]["correlationid"])
+        
+
+    def test_marshaller_data_entry_schema(self):
+        schema = {'attributes': [{'units': None, 'description': None, 'name': 'file', 'class': 'file'}], 'id': None, 'class': 'data_entry_schema'}
+        schema = self.marshaller.dict_to_obj(schema)
 
 if __name__ == '__main__':
     unittest.main()
