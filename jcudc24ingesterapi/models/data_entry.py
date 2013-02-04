@@ -24,8 +24,8 @@ class DataEntry(APIDomainObject):
     location_offset = typed("_location_offset", LocationOffset, "Offset from the locations frame of reference")
     data = typed("_data", dict, "Data storage")
 
-    def __init__(self, dataset=None, timestamp=None, data_entry_id = None, **kwargs):
-        self.data_entry_id = data_entry_id
+    def __init__(self, dataset=None, timestamp=None, id = None, **kwargs):
+        self.id = id
         self.dataset = dataset
         self.timestamp = timestamp
         self.data = {}
@@ -52,7 +52,8 @@ class FileObject(object):
     
     mime_type = typed("_mime_type", str, "The mime type of the file")
     
-    def __init__(self, f_handle, mime_type=None):
+    def __init__(self, f_path=None, f_handle=None, mime_type=None):
         self.f_handle = f_handle
+        self.f_path = f_path
         self.mime_type = mime_type
         
