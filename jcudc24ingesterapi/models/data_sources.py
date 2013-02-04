@@ -16,6 +16,9 @@ class _DataSource(APIDomainObject):
     """
     processing_script = typed("_processing_script", str, "Script to run after download")
 
+    def __init__(self, processing_script=None):
+        self.processing_script = processing_script
+
 class DatasetDataSource(_DataSource):
     """
     Uses the resulting data_entry from another dataset and processes it further.
@@ -53,7 +56,7 @@ class PushDataSource(_DataSource):
     """
     A data source where the external application will use the ingester platform API to pass data into.
     """
-    pass
+    __xmlrpc_class__ = "push_data_source"
 
 class SOSDataSource(_DataSource):
     """

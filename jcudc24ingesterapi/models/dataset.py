@@ -18,8 +18,8 @@ class Dataset(APIDomainObject):
     enabled = typed("_enabled", bool, "Dataset enabled")
     description = typed("_description", (str,unicode), "Description of dataset")
 
-    def __init__(self, location = None, schema = None, data_source = None, sampling=None, redbox_uri = None, location_offset = None):
-        self.id = None
+    def __init__(self, dataset_id = None, location = None, schema = None, data_source = None, sampling=None, redbox_uri = None, location_offset = None):
+        self.id = dataset_id
         self.location = location
         self.schema = schema                      # subclass of DataType
         self.data_source = data_source
