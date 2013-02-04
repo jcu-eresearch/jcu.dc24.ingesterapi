@@ -44,8 +44,10 @@ class Schema(APIDomainObject):
     will overwrite previous values.
     """
     id = typed("_id", int)
+    name = typed("_name", (str, unicode) )
 
-    def __init__(self):
+    def __init__(self, name=None):
+        self.name = name
         self.__attrs = SchemaAttrDict() 
         self.__extends = TypedList(int)
 

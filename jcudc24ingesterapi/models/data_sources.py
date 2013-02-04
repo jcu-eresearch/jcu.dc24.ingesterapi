@@ -20,39 +20,40 @@ class DatasetDataSource(_DataSource):
     """
     Uses the resulting data_entry from another dataset and processes it further.
     """
-    def __init__(self, sampling, dataset_id):
+    __xmlrpc_class__ = "dataset_data_source"
+    dataset_id = typed("_dataset_id", int, "")
+    
+    def __init__(self, dataset_id):
         self.dataset_id = dataset_id
-        self.sampling = sampling
 
 class PullDataSource(_DataSource):
     """
     A data source that polls a URI for data of the dataset's data type.
     """
     __xmlrpc_class__ = "pull_data_source"
-    uri = typed("_uri", str, "URI of the directory to scan")
-    pattern = typed("_pattern", str, "Pattern for identifying files, and extracting metadata")
-    mime_type = typed("_mime_type", str, "Mime type of the file")
-    field = typed("_field", str, "Field name to ingest into")
-    sampling_script = typed("_sampling_script", str, "Script to run to determine when to sample")
-    def __init__(self, uri=None, pattern=None, mime_type=None, field=None, processing_script=None, sampling_script=None):
+    url = typed("_url", (str,unicode), "URL of the directory to scan")
+    pattern = typed("_pattern", (str,unicode), "Pattern for identifying files, regex")
+    recursive = typed("_recursive", bool, "Should the URL be treated as an index page")
+    mime_type = typed("_mime_type", (str,unicode), "Mime type of the file")
+    field = typed("_field", (str,unicode), "Field name to ingest into")
+    sampling = typed("_sampling", _Sampling, "Script to run to determine when to sample")
+    def __init__(self, url=None, pattern=None, recursive=False, mime_type=None, field=None, processing_script=None, sampling=None):
         """Initialise the PullDataSource with a URI for the source file, and the field that 
         the uri will be saved to.
         """
-        self.uri = uri
+        self.url = url
         self.field = field
         self.pattern = pattern
         self.mime_type = mime_type
         self.processing_script = processing_script
-        self.sampling_script = sampling_script
-
+        self.sampling = sampling
+        self.recursive = recursive
 
 class PushDataSource(_DataSource):
     """
     A data source where the external application will use the ingester platform API to pass data into.
     """
     pass
-
-
 
 class SOSDataSource(_DataSource):
     """

@@ -5,16 +5,20 @@ import datetime
 import httplib
 import urlparse
 
-from jcudc24ingesterapi import parse_timestamp, format_timestamp
+from jcudc24ingesterapi import parse_timestamp, format_timestamp, typed
 import jcudc24ingesterapi.models.dataset
 import jcudc24ingesterapi.models.locations
 import jcudc24ingesterapi.models.sampling
 import jcudc24ingesterapi.models.data_sources
-import jcudc24ingesterapi.models.data_entry
+import jcudc24ingesterapi.models.metadata
 import jcudc24ingesterapi.schemas.metadata_schemas
 import jcudc24ingesterapi.schemas.data_entry_schemas
 import jcudc24ingesterapi.schemas.data_types
 from jcudc24ingesterapi.models.data_entry import FileObject
+
+def get_properties(obj):
+    """Returns a list of valid property names for this object"""
+    return [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
 
 class Marshaller(object):
     """A Marshaller object is responsible for converting between real objects
@@ -33,6 +37,7 @@ class Marshaller(object):
         self.scanPackage(jcudc24ingesterapi.schemas.metadata_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_entry_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_types)
+        self.scanPackage(jcudc24ingesterapi.ingester_platform_api)
         
     def scanPackage(self, pkg):
         """Scan through the given package and find classes that are eligable for 
@@ -43,12 +48,17 @@ class Marshaller(object):
                 self._classes[cls] = cls.__xmlrpc_class__
                 self._class_factories[cls.__xmlrpc_class__] = cls
 
-    def obj_to_dict(self, obj):
+    def class_for(self, klass):
+        return self._class_factories[klass]
+
+    def obj_to_dict(self, obj, special_attrs=[]):
         """Maps an object of base class BaseManagementObject to a dict.
         """
         if type(obj) in (str, int, float, unicode, bool, type(None), tuple):
             return obj
-        if not self._classes.has_key(type(obj)):
+        elif type(obj) == list:
+            return [self.obj_to_dict(o, special_attrs=special_attrs) for o in obj] 
+        elif not self._classes.has_key(type(obj)):
             raise ValueError("This object class is not supported: " + str(obj.__class__))
         ret = {}
         if isinstance(obj, jcudc24ingesterapi.schemas.Schema):
@@ -60,18 +70,21 @@ class Marshaller(object):
             if hasattr(obj, "id"):
                 ret["id"] = obj.id
         else:
-            data_keys = [k for k,v in inspect.getmembers(type(obj)) if isinstance(v, property)]
+            data_keys = get_properties(obj)
 
             for k in data_keys:
                 v = getattr(obj, k)
                 if type(v) == datetime.datetime:
                     ret[k] = format_timestamp(v)
-                elif type(v) == dict:
+                elif isinstance(v, dict):
                     ret[k] = {}
                     for k1 in v:
                         ret[k][k1] = self.obj_to_dict(v[k1])
                 else:
                     ret[k] = self.obj_to_dict(v)
+        for k in special_attrs:
+            ret[k] = getattr(obj, k)
+            
         ret["class"] = self._classes[type(obj)]
         return ret
 
@@ -83,7 +96,9 @@ class Marshaller(object):
         """
         if isinstance(x, list):
             return [self.dict_to_obj(obj) for obj in x]
-        if not x.has_key("class"):
+        elif type(x) in (str, int, float, unicode, bool, type(None)):
+            return x
+        elif not x.has_key("class"):
             raise ValueError("There is no class element")
         
         if obj == None:
@@ -100,7 +115,7 @@ class Marshaller(object):
                 continue
             elif k == "attributes" and x["class"].endswith("_schema"):
                 for attr in x["attributes"]:
-                    obj.addAttr(self._class_factories[attr["class"]](attr["name"], 
+                    obj.addAttr(self.class_for(attr["class"])(attr["name"], 
                                 description=attr["description"], units=attr["units"]))
 #                    setattr(obj, k2, self._class_factories[x["attributes"][k2]]())
             elif k not in data_keys:
@@ -111,6 +126,8 @@ class Marshaller(object):
                     setattr(obj, k, self.dict_to_obj(x[k]))
                 elif datetime.datetime in data_keys[k]:
                     setattr(obj, k, parse_timestamp(x[k]))
+                elif isinstance(x[k], list):
+                    setattr(obj, k, [self.dict_to_obj(val_) for val_ in x[k]])
                 else:
                     setattr(obj, k, x[k])
         return obj
@@ -200,33 +217,21 @@ class IngesterPlatformAPI(object):
         :return: No return
         """
         to_upload = []
-        unit_dto = {"delete":[],
-                    "update":[],
-                    "insert":[],
-                    "enable":[],
-                    "disable":[]}
+        unit_dto = self._marshaller.obj_to_dict(unit)
         
         for obj in unit._to_update:
-            obj_dict = self._marshaller.obj_to_dict(obj)
-            unit_dto["update"].append(obj_dict)
-            
             if not hasattr(obj, "data"): continue
             for k in obj.data:
                 val = obj.data[k]
                 if not isinstance(val, FileObject): continue
-                to_upload.append( (obj.id, obj_dict["class"], val) )
+                to_upload.append( ( "%s:%d"%(obj.__xmlrpc_class__,obj.id), k, val) )
 
         for obj in unit._to_insert:
-            obj_dict = self._marshaller.obj_to_dict(obj)
-            unit_dto["insert"].append(obj_dict)
             if not hasattr(obj, "data"): continue
             for k in obj.data:
                 val = obj.data[k]
                 if not isinstance(val, FileObject): continue
-                to_upload.append( ( "%s:%d"%(obj_dict["class"],obj.id), k, val) )
-        
-        unit_dto["enable"] = unit._to_enable
-        unit_dto["disable"] = unit._to_disable
+                to_upload.append( ( "%s:%d"%(obj.__xmlrpc_class__,obj.id), k, val) )
         
         transaction_id = self.server.precommit(unit_dto)
         # do uploads
@@ -307,7 +312,14 @@ class UnitOfWork(object):
     
     There is no rollback, simply discard the unit of work in this case.
     """
-    def __init__(self, service):
+    __xmlrpc_class__ = "unit_of_work"
+    to_insert = typed("_to_insert", list)
+    to_update = typed("_to_update", list)
+    to_delete = typed("_to_delete", list)
+    to_enable = typed("_to_enable", list)
+    to_disable = typed("_to_disable", list)
+    
+    def __init__(self, service=None):
         self.service = service
         self._to_insert = []
         self._to_update = []

@@ -15,8 +15,8 @@ class DataType(object):
     Note: ForeignKey or other table links are not supported, only single, flat tables are supported.
     """
     description = typed("_description", str, "Description of the field")
-    name = typed("_name", str, "Name of the field")
-    units = typed("_units", str, "Units of the field")
+    name = typed("_name", (str, unicode), "Name of the field")
+    units = typed("_units", (str, unicode), "Units of the field")
     def __init__(self, name, description=None, units=None):
         if name is None or RE_ATTR_NAME.match(name) == None:
             raise ValueError("Name is not valid")

@@ -48,7 +48,7 @@ class DataEntry(APIDomainObject):
 class FileObject(object):
     """This object references a file on disk that is to be downloaded
     """
-    __xmlrpc_class__ = "file"
+    __xmlrpc_class__ = "file_object"
     
     mime_type = typed("_mime_type", str, "The mime type of the file")
     
