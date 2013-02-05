@@ -94,8 +94,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
         work = self.ingester_platform.createUnitOfWork()
         data_entry_2 = DataEntry(dataset2.id, datetime.datetime.now())
-        data_entry_2['file'] = FileObject(open(os.path.join(
-                    os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml")), "text/xml")
+        data_entry_2['file'] = FileObject(f_handle=open(os.path.join(
+                    os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml")), 
+                    mime_type="text/xml")
         work.post(data_entry_2)
         work.commit()
         self.assertIsNotNone(data_entry_2.id)
@@ -584,6 +585,9 @@ More"""
         
         data_entry_dto = self.marshaller.obj_to_dict(data_entry)
         self.assertEqual("text/xml", data_entry_dto["data"]["temp"]["mime_type"])
+        
+        data_entry_domain = self.marshaller.dict_to_obj(data_entry_dto)
+        self.assertEqual("text/xml", data_entry_domain["temp"].mime_type)
 
     def test_unit_of_work_roundtrip(self):
         unit = UnitOfWork(None)
