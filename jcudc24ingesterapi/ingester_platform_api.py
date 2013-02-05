@@ -276,14 +276,14 @@ class IngesterPlatformAPI(object):
         """
         return self.server.disableDataset(dataset_id)
 
-    def getIngesterLogs(self, dataset_id):
+    def getIngesterEvents(self, dataset_id):
         """
         Get all ingester logs for a single dataset.
 
         :param dataset_id: ID of the dataset to get ingester logs for
         :return: an array of file handles for all log files for that dataset.
         """
-        pass
+        return self.server.getIngesterEvents(dataset_id)
     
     def getLocation(self, loc_id):
         """
