@@ -12,7 +12,9 @@ import inspect
 # Registered type convertes. (from, to) = func
 converters = { (Decimal, float): float,
               (unicode, str): str,
-              (int, float): float }
+              (int, float): float,
+              (unicode, int): int,
+              (unicode, bool): bool }
 
 def deleter(attr):
     """Deleter closure, used to remove the inner variable"""
