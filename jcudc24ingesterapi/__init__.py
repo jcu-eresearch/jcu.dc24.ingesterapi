@@ -1,9 +1,18 @@
+import pkg_resources
+pkg_resources.declare_namespace(__name__)
+
 __author__ = 'Casey Bajema'
+from decimal import Decimal
 
 import time
 import datetime
 import email.utils as eut
 import inspect
+
+# Registered type convertes. (from, to) = func
+converters = { (Decimal, float): float,
+              (unicode, str): str,
+              (int, float): float }
 
 def deleter(attr):
     """Deleter closure, used to remove the inner variable"""
@@ -24,7 +33,16 @@ def setter(attr, valid_types):
         valid_types = (valid_types,)
     def setter_real(self, var):
         if var != None and \
-                not isinstance(var, valid_types): raise TypeError("%s Not of required type: %s"%(str(type(var)), str(valid_types)))
+                not isinstance(var, valid_types): 
+            # Try to convert
+            converted = False
+            for t in valid_types:
+                if (type(var), t) in converters:
+                    var = converters[(type(var), t)](var)
+                    converted = True
+                    break
+            if not converted:
+                raise TypeError("%s Not of required type %s for %s"%(str(type(var)), str(valid_types), attr))
         setattr(self,attr,var)
         if hasattr(self, "_listener") and inspect.isfunction(getattr(self, "_listener")):
             func = getattr(self, "_listener")

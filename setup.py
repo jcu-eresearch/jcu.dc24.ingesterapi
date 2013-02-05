@@ -13,7 +13,7 @@ long_description = (
     open('CHANGES.txt').read()
     + '\n')
 
-setup(name='jcu.dc24.ingesterapi',
+setup(name='jcudc24ingesterapi',
       version=version,
       description="API for CC-DAM ingester platform",
       long_description=long_description,
@@ -36,7 +36,7 @@ setup(name='jcu.dc24.ingesterapi',
           'setuptools', "sqlalchemy",
           # -*- Extra requirements: -*-
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
+      entry_points={
+        "console_scripts": ["apiclient = jcudc24ingesterapi.cli:main"]
+      },
       )

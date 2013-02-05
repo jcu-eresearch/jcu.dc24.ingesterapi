@@ -76,7 +76,7 @@ class PeriodicSampling(_Sampling):
     __xmlrpc_class__ = "periodic_sampling"
     rate = typed("_rate", int, "Rate of sampling in ms")
 
-    def __init__(self, rate):
+    def __init__(self, rate=None):
         self.rate = rate
 
     def sample_now(self, datetime):

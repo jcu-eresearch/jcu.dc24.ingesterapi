@@ -16,3 +16,4 @@ class DataEntrySchema(Schema):
     will overwrite previous values.
     """
     __xmlrpc_class__ = "data_entry_schema"
+
