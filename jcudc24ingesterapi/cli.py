@@ -83,6 +83,8 @@ USAGE
             print "get"
         elif args.verb[0] == "search":
             pprint.pprint(client.search(args.args[0]))
+        elif args.verb[0] == "events":
+            pprint.pprint(client.getIngesterEvents(args.args[0]))
         elif args.verb[0] == "post":
             obj = json.loads(args.args[1])
             obj["class"] = args.args[0]

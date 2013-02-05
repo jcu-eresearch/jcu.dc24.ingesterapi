@@ -52,8 +52,8 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
 
-        dataset1 = Dataset(None, temperature_schema.id)
-        dataset2 = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle", processing_script="file://d:/processing_scripts/awsome_processing.py"), None)
+        dataset1 = Dataset(location=None, schema=temperature_schema.id)
+        dataset2 = Dataset(location=None, schema=file_schema.id, data_source=PullDataSource("http://test.com", "file_handle", processing_script="file://d:/processing_scripts/awsome_processing.py"))
 
 #        dataset3 = Dataset(None, file_schema, PullDataSource("http://test.com", "file_handle"), CustomSampling("file://d:/sampling_scripts/awsome_sampling.py"), "file://d:/processing_scripts/awsome_processing.py")
 
@@ -94,8 +94,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
         work = self.ingester_platform.createUnitOfWork()
         data_entry_2 = DataEntry(dataset2.id, datetime.datetime.now())
-        data_entry_2['file'] = FileObject(open(os.path.join(
-                    os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml")), "text/xml")
+        data_entry_2['file'] = FileObject(f_handle=open(os.path.join(
+                    os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml")), 
+                    mime_type="text/xml")
         work.post(data_entry_2)
         work.commit()
         self.assertIsNotNone(data_entry_2.id)
@@ -177,9 +178,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         file_schema = self.ingester_platform.post(file_schema)
 
         location = self.ingester_platform.post(Location(10.0, 11.0, "Test Site", 100))
-        temp_dataset = Dataset(None, temperature_schema.id)
+        temp_dataset = Dataset(location=None, schema=temperature_schema.id)
 
-        file_dataset = Dataset(None, file_schema.id, PullDataSource("http://test.com", "file_handle"), None, "file://d:/processing_scripts/awsome_processing.py")
+        file_dataset = Dataset(location=None, schema=file_schema.id, data_source=PullDataSource("http://test.com", "file_handle", processing_script="file://d:/processing_scripts/awsome_processing.py"))
 
 
     def test_listeners(self):
@@ -319,7 +320,7 @@ class TestIngesterPersistence(unittest.TestCase):
         script_contents = """Some Script
 More"""
         
-        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", processing_script=script_contents), location_offset=LocationOffset(0, 1, 2))
+        dataset = Dataset(location=loc.id, schema=file_schema.id, data_source=PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", processing_script=script_contents), location_offset=LocationOffset(0, 1, 2))
         dataset1 = self.ingester_platform.post(dataset)
         self.assertIsNotNone(dataset1, "Dataset should not be none")
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
@@ -328,7 +329,7 @@ More"""
         self.assertEquals(dataset1.location_offset.y, 1)
         self.assertEquals(dataset1.location_offset.z, 2)
 
-        self.assertEquals(dataset1.data_source.processing_script, script_contents)
+        self.assertEquals(script_contents, dataset1.data_source.processing_script)
 
         datasets = self.ingester_platform.findDatasets()
         self.assertEquals(1, len(datasets))
@@ -360,7 +361,7 @@ More"""
 
         self.assertIsNotNone(file_schema_id, "Schema ID should not be null")
 
-        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
+        dataset = Dataset(location=loc.id, schema=file_schema.id, data_source=PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"))
         unit.insert(dataset)
         
         # Persist all the objects
@@ -394,8 +395,7 @@ class TestIngesterFunctionality(unittest.TestCase):
         file_schema.addAttr(FileDataType("file"))
         file_schema = self.ingester_platform.post(file_schema)
         
-        dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file"),
-                PeriodicSampling(10000))
+        dataset = Dataset(location=loc.id, schema=file_schema.id, data_source=PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", sampling=PeriodicSampling(10000)))
         dataset1 = self.ingester_platform.post(dataset)
         self.assertEquals(dataset1.location, dataset.location, "Location ID does not match")
         self.assertEquals(dataset1.schema, dataset.schema, "schema does not match")
@@ -548,7 +548,7 @@ class TestMarshaller(unittest.TestCase):
         script_contents = """Some Script
 More"""
         
-        dataset = Dataset(1, 2, PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", processing_script=script_contents), location_offset=LocationOffset(0, 1, 2))
+        dataset = Dataset(location=1, schema=2, data_source=PullDataSource("http://www.bom.gov.au/radar/IDR733.gif", "file", processing_script=script_contents), location_offset=LocationOffset(0, 1, 2))
 
         dataset_dict = self.marshaller.obj_to_dict(dataset)
         dataset1 = self.marshaller.dict_to_obj(dataset_dict)
@@ -580,11 +580,14 @@ More"""
     def test_file_object_roundtrip(self):
         """The file object should marshall everything but the file stream"""
         data_entry = DataEntry(1)
-        data_entry["temp"] = FileObject(os.path.join(
-                    os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml"), "text/xml")
+        data_entry["temp"] = FileObject(f_path=os.path.join(
+                    os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml"), mime_type="text/xml")
         
         data_entry_dto = self.marshaller.obj_to_dict(data_entry)
         self.assertEqual("text/xml", data_entry_dto["data"]["temp"]["mime_type"])
+        
+        data_entry_domain = self.marshaller.dict_to_obj(data_entry_dto)
+        self.assertEqual("text/xml", data_entry_domain["temp"].mime_type)
 
     def test_unit_of_work_roundtrip(self):
         unit = UnitOfWork(None)

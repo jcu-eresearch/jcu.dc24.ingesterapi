@@ -26,8 +26,9 @@ class DatasetDataSource(_DataSource):
     __xmlrpc_class__ = "dataset_data_source"
     dataset_id = typed("_dataset_id", int, "")
     
-    def __init__(self, dataset_id):
+    def __init__(self, dataset_id=None, processing_script=None):
         self.dataset_id = dataset_id
+        self.processing_script = processing_script
 
 class PullDataSource(_DataSource):
     """
@@ -57,6 +58,10 @@ class PushDataSource(_DataSource):
     A data source where the external application will use the ingester platform API to pass data into.
     """
     __xmlrpc_class__ = "push_data_source"
+    path = typed("_path", (str,unicode), "Path to monitor for new files")
+    def __init__(self, path=None):
+        self.path = path
+        
 
 class SOSDataSource(_DataSource):
     """
