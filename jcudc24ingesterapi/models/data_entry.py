@@ -1,6 +1,6 @@
 import datetime
 from jcudc24ingesterapi.ingester_exceptions import UnknownParameterError
-from jcudc24ingesterapi import typed, APIDomainObject
+from jcudc24ingesterapi import typed, APIDomainObject, format_timestamp
 from jcudc24ingesterapi.models.locations import LocationOffset
 
 __author__ = 'Casey Bajema'
@@ -43,6 +43,11 @@ class DataEntry(APIDomainObject):
         self.data[item] = value
     def __delitem__(self, item):
         del self.data[item]
+    def __str__(self):
+        ret = "Time: %s Dataset: %s\n"%(format_timestamp(self.timestamp), self.dataset)
+        for k in self.data:
+            ret += "\t%s = %s\n"%(k, self.data[k])
+        return ret
 
 
 class FileObject(object):
@@ -56,5 +61,9 @@ class FileObject(object):
         self.f_handle = f_handle
         self.f_path = f_path
         self.mime_type = mime_type
-        
+    def __str__(self):
+        ret = "FileObject("
+        ret += "f_path: %s"%self.f_path if self.f_path != None else "f_handle: %s"%self.f_handle
+        ret += ", mime_type: %s)"%self.mime_type
+        return ret
     
