@@ -57,6 +57,10 @@ class PushDataSource(_DataSource):
     A data source where the external application will use the ingester platform API to pass data into.
     """
     __xmlrpc_class__ = "push_data_source"
+    path = typed("_path", (str,unicode), "Path to monitor for new files")
+    def __init__(self, path=None):
+        self.path = path
+        
 
 class SOSDataSource(_DataSource):
     """
