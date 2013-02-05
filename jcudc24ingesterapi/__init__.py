@@ -84,6 +84,7 @@ def format_timestamp(in_date):
 
 def parse_timestamp(date_str):
     """Parse the date time returned by the DAM"""
+    if date_str == None: return None
     (dt, mSecs) = date_str.strip().split(".") 
     if mSecs.endswith('Z'): mSecs = mSecs[:-1]
     mSecs = mSecs+'0'*(6-len(mSecs))
