@@ -61,7 +61,7 @@ def process(cwd, data_entries):
     return ret
 """
 
-temp_dataset1 = Dataset(location=loc.id, schema=file_schema.id, data_source=DatasetDataSource(file_dataset.id, processing_script=processing_script%"28180E08030000BE"))
+temp_dataset1 = Dataset(location=loc.id, schema=temp_schema.id, data_source=DatasetDataSource(file_dataset.id, processing_script=processing_script%"28180E08030000BE"))
 temp_dataset1.enabled = True
 temp_dataset1 = ingester_platform.post(temp_dataset1)
 
