@@ -14,7 +14,7 @@ import jcudc24ingesterapi.models.metadata
 import jcudc24ingesterapi.schemas.metadata_schemas
 import jcudc24ingesterapi.schemas.data_entry_schemas
 import jcudc24ingesterapi.schemas.data_types
-from jcudc24ingesterapi.models.data_entry import FileObject
+from jcudc24ingesterapi.models.data_entry import FileObject, DataEntry
 
 def get_properties(obj):
     """Returns a list of valid property names for this object"""
@@ -124,6 +124,9 @@ class Marshaller(object):
             else:
                 if isinstance(x[k], dict) and dict not in data_keys[k]:
                     setattr(obj, k, self.dict_to_obj(x[k]))
+                elif isinstance(obj, DataEntry) and k == "data":
+                    for data_key in x[k]:
+                        obj[data_key] = self.dict_to_obj(x[k][data_key])
                 elif datetime.datetime in data_keys[k]:
                     setattr(obj, k, parse_timestamp(x[k]))
                 elif isinstance(x[k], list):
@@ -239,13 +242,17 @@ class IngesterPlatformAPI(object):
         (proto, host, path, params, query, frag) = urlparse.urlparse(self.service_url)
         c = httplib.HTTPConnection(host)
         for oid, attr, file_obj in to_upload:
-            c.request('POST', "%s/%s/%s/%s"%(path, transaction_id, oid, attr), file_obj.f_handle, 
+            if file_obj.f_handle != None:
+                f_handle = file_obj.f_handle
+            else:
+                f_handle = open(file_obj.f_path, "rb")
+            c.request('POST', "%s/%s/%s/%s"%(path, transaction_id, oid, attr), f_handle, 
                       {"Content-Type":"application/octet-stream"})
             r = c.getresponse()
             r.close()
             if r.status != 200:
                 raise Exception("Error uploading data files")
-            file_obj.f_handle.close()
+            f_handle.close()
         c.close()
         
         results = self.server.commit(transaction_id)
@@ -269,14 +276,14 @@ class IngesterPlatformAPI(object):
         """
         return self.server.disableDataset(dataset_id)
 
-    def getIngesterLogs(self, dataset_id):
+    def getIngesterEvents(self, dataset_id):
         """
         Get all ingester logs for a single dataset.
 
         :param dataset_id: ID of the dataset to get ingester logs for
         :return: an array of file handles for all log files for that dataset.
         """
-        pass
+        return self.server.getIngesterEvents(dataset_id)
     
     def getLocation(self, loc_id):
         """

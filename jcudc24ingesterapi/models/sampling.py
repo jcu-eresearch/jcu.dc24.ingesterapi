@@ -79,9 +79,14 @@ class PeriodicSampling(_Sampling):
     def __init__(self, rate=None):
         self.rate = rate
 
-    def sample_now(self, datetime):
-        if self.last_sample + self.rate >= datetime:
-            self.last_sample = datetime
-            return True
-        return False
+
+class CronSampling(_Sampling):
+    """
+    Sample at a set rate in milliseconds
+    """
+    __xmlrpc_class__ = "cron_sampling"
+    cron_string = typed("_cron_string", int, "Cron configuration string")
+
+    def __init__(self, cron_string=None):
+        self.cron_string = cron_string
 

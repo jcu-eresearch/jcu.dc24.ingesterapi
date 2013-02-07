@@ -29,8 +29,7 @@ loc = Location(-19.34427, 146.784197, "Mt Stuart", 100, None)
 loc = ingester_platform.post(loc)
 
 # Create the dataset to store the data in
-file_dataset = Dataset(loc.id, file_schema.id, PullDataSource("http://emu.hpc.jcu.edu.au/tree/split/", field="file", recursive=True),
-                PeriodicSampling(10000))
+file_dataset = Dataset(location=loc.id, schema=file_schema.id, data_source=PullDataSource(url="http://emu.hpc.jcu.edu.au/tree/split/", field="file", recursive=True, sampling=PeriodicSampling(10000)))
 file_dataset.enabled = False
 file_dataset = ingester_platform.post(file_dataset)
 
@@ -40,26 +39,29 @@ import os
 import datetime
 from dc24_ingester_platform.utils import *
 
-def process(cwd, data_entry):
-    data_entry = data_entry[0]
+def process(cwd, data_entries):
     ret = []
     started = False
-    with open(os.path.join(cwd, data_entry["file"]["path"])) as f:
-        for l in f.readlines():
-            l = l.strip()
-            if not started:
-                if l == "BEGIN TEMP": started = True
-            elif started and l == "END TEMP":
-                break
-            else:
-                # parse line
-                l = l.split(",")
-                if l[1] != "%s": continue
-                ret.append( {"timestamp":format_timestamp(datetime.datetime.now()), "temp":float(l[2]) } )
+    for data_entry in data_entries:
+        with open(os.path.join(cwd, data_entry["file"].f_path)) as f:
+            for l in f.readlines():
+                l = l.strip()
+                if not started:
+                    if l == "BEGIN TEMP": started = True
+                elif started and l == "END TEMP":
+                    break
+                else:
+                    # parse line
+                    l = l.split(",")
+                    if len(l) < 3: continue
+                    if l[1] != "%s": continue
+                    new_data_entry = DataEntry(timestamp=datetime.datetime.now())
+                    new_data_entry["temp"] = float(l[2])
+                    ret.append( new_data_entry )
     return ret
 """
 
-temp_dataset1 = Dataset(loc.id, file_schema.id, DatasetDataSource(file_dataset.id, processing_script=processing_script%"28180E08030000BE"))
+temp_dataset1 = Dataset(location=loc.id, schema=temp_schema.id, data_source=DatasetDataSource(file_dataset.id, processing_script=processing_script%"28180E08030000BE"))
 temp_dataset1.enabled = True
 temp_dataset1 = ingester_platform.post(temp_dataset1)
 
