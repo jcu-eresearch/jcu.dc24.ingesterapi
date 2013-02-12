@@ -13,7 +13,7 @@ long_description = (
     open('CHANGES.txt').read()
     + '\n')
 
-setup(name='jcudc24ingesterapi',
+setup(name='jcu.dc24.ingesterapi',
       version=version,
       description="API for CC-DAM ingester platform",
       long_description=long_description,
