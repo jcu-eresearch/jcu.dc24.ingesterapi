@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import sys
+
 from jcudc24ingesterapi.models.dataset import Dataset
 from jcudc24ingesterapi.models.locations import Location, Region
 from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
@@ -11,6 +13,11 @@ from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema,
 from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling, CustomSampling
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
 from jcudc24ingesterapi.schemas.data_entry_schemas import DataEntrySchema
+
+if len(sys.argv) > 1:
+    tree_url = sys.argv[1]
+else:
+    tree_url = "http://emu.hpc.jcu.edu.au/tree/split/"
 
 auth = CredentialsAuthentication("casey", "password")
 ingester_platform = IngesterPlatformAPI("http://localhost:8080/api", auth)
@@ -29,7 +36,7 @@ loc = Location(-19.34427, 146.784197, "Mt Stuart", 100, None)
 loc = ingester_platform.post(loc)
 
 # Create the dataset to store the data in
-file_dataset = Dataset(location=loc.id, schema=file_schema.id, data_source=PullDataSource(url="http://emu.hpc.jcu.edu.au/tree/split/", field="file", recursive=True, sampling=PeriodicSampling(10000)))
+file_dataset = Dataset(location=loc.id, schema=file_schema.id, data_source=PullDataSource(url=tree_url, field="file", recursive=True, sampling=PeriodicSampling(10000)))
 file_dataset.enabled = False
 file_dataset = ingester_platform.post(file_dataset)
 
