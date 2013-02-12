@@ -38,6 +38,6 @@ class MetadataEntry(APIDomainObject):
 class DatasetMetadataEntry(MetadataEntry):
     __xmlrpc_class__ = "dataset_metadata_entry"
 
-class DataEntryMetdataEntry(MetadataEntry):
+class DataEntryMetadataEntry(MetadataEntry):
     __xmlrpc_class__ = "data_entry_metadata_entry"
     
