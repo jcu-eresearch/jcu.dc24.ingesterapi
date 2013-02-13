@@ -61,7 +61,15 @@ class PushDataSource(_DataSource):
     path = typed("_path", (str,unicode), "Path to monitor for new files")
     def __init__(self, path=None):
         self.path = path
-        
+
+
+class SOSScraperDataSource(_DataSource):
+    __xmlrpc_class__ = "sos_scraper_data_source"
+    url = typed("_url", (str,unicode), "URL of the directory to scan")
+    field = typed("_field", (str,unicode), "Field name to ingest into")
+    def __init__(self, url=None, field=None):
+        self.url = url
+        self.field = field
 
 class SOSDataSource(_DataSource):
     """
