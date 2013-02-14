@@ -1,7 +1,7 @@
 from jcudc24ingesterapi.models.sampling import _Sampling
 from jcudc24ingesterapi import typed, APIDomainObject
 from simplesos.client import SOSVersions
-from simplesos.varients import _52North, SOSVarients
+from simplesos.varients import _52North, SOSVariants, getSOSVariant
 
 
 """
@@ -71,13 +71,13 @@ class SOSScraperDataSource(_DataSource):
     url = typed("_url", (str,unicode), "URL of the directory to scan")
     field = typed("_field", (str,unicode), "Field name to ingest into")
     sampling = typed("_sampling", _Sampling, "Script to run to determine when to sample")
-    varient = typed("_varient", (SOSVarients), "The SOS varient.")
+    variant = typed("_variant", (SOSVariants), "The SOS varient.")
     version = typed("_version", (str,unicode), "The SOS API version to use.")
-    def __init__(self, url=None, field=None, sampling=None, processing_script=None, version=SOSVersions.v_1_0_0, varient=_52North()):
+    def __init__(self, url=None, field=None, sampling=None, processing_script=None, version=SOSVersions.v_1_0_0, variant="52North"):
         self.url = url
         self.field = field
         self.sampling = sampling
-        self.varient = varient
+        self.variant = getSOSVariant(variant)()
         self.version = version
         self.processing_script = processing_script
 
