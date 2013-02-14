@@ -1,5 +1,8 @@
 from jcudc24ingesterapi.models.sampling import _Sampling
 from jcudc24ingesterapi import typed, APIDomainObject
+from simplesos.client import SOSVersions
+from simplesos.varients import _52North, SOSVarients
+
 
 """
     Defines all possible data sources or in other words data input methods that can be provisioned.
@@ -67,9 +70,16 @@ class SOSScraperDataSource(_DataSource):
     __xmlrpc_class__ = "sos_scraper_data_source"
     url = typed("_url", (str,unicode), "URL of the directory to scan")
     field = typed("_field", (str,unicode), "Field name to ingest into")
-    def __init__(self, url=None, field=None):
+    sampling = typed("_sampling", _Sampling, "Script to run to determine when to sample")
+    varient = typed("_varient", (SOSVarients), "The SOS varient.")
+    version = typed("_version", (str,unicode), "The SOS API version to use.")
+    def __init__(self, url=None, field=None, sampling=None, processing_script=None, version=SOSVersions.v_1_0_0, varient=_52North()):
         self.url = url
         self.field = field
+        self.sampling = sampling
+        self.varient = varient
+        self.version = version
+        self.processing_script = processing_script
 
 class SOSDataSource(_DataSource):
     """
