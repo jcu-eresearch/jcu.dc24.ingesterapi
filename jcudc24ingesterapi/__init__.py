@@ -95,9 +95,31 @@ def parse_timestamp(date_str):
 
     return dt+mSeconds
 
+class ValidationError(object):
+    """A ValidationError represents an issue with a field on an object.
+    """
+    def __init__(self, field, message, code=None):
+        """Initialise a validation error.
+        
+        :param field: the field name
+        :param message: human readable message about what is wrong
+        :param code: optional computer readable code identifying the error
+        """
+        self.field = field
+        self.message = message
+        self.code = code
+        
+    def __str__(self):
+        return "%s: %s"%(self.field, self.message)
+
 class APIDomainObject(object):
     """This is the base class of all API domain objects, and provides a listener method
     for indicating when data on the object is updated."""
     def set_listener(self, func):
         self._listener = func
         
+    def validate(self):
+        """Checks all of the properties on the object, and returns a list
+        of validation errors."""
+        return []
+    

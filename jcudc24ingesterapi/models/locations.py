@@ -1,5 +1,5 @@
 __author__ = 'Casey Bajema'
-from jcudc24ingesterapi import typed, APIDomainObject
+from jcudc24ingesterapi import typed, APIDomainObject, ValidationError
 
 class Region(APIDomainObject):
     """
@@ -55,6 +55,12 @@ class Location(APIDomainObject):
         self.longitude = longitude                      # double
         self.elevation = elevation                      # double
         self.region = region
+        
+    def validate(self):
+        valid = []
+        if self.name == None:
+            valid.append(ValidationError("name", "Name must be set"))
+        return valid
 
 class LocationOffset(APIDomainObject):
     """An offset from a frame of reference.

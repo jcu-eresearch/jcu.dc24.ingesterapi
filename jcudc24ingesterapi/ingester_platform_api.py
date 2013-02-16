@@ -1,3 +1,4 @@
+from jcudc24ingesterapi.ingester_exceptions import InvalidObjectError
 __author__ = 'Casey Bajema'
 import xmlrpclib
 import inspect
@@ -5,7 +6,8 @@ import datetime
 import httplib
 import urlparse
 
-from jcudc24ingesterapi import parse_timestamp, format_timestamp, typed
+from jcudc24ingesterapi import parse_timestamp, format_timestamp, typed,\
+    ValidationError
 import jcudc24ingesterapi.models.dataset
 import jcudc24ingesterapi.models.locations
 import jcudc24ingesterapi.models.sampling
@@ -352,13 +354,21 @@ class UnitOfWork(object):
         @return: the ID to use on other objects.
         """
         if ingester_object.id != None:
-            raise ValueError("Expected no ID set")
+            raise InvalidObjectError([ValidationError("id","Expected no ID set")])
+        validation = ingester_object.validate()
+        if len(validation) > 0:
+            raise InvalidObjectError(validation)
+        
         ingester_object.id = self._next
         self._to_insert.append(ingester_object)
         self._next = self._next - 1
         return ingester_object.id
 
     def update(self, ingester_object):
+        validation = ingester_object.validate()
+        if len(validation) > 0:
+            raise InvalidObjectError(validation)
+        
         self._to_update.append(ingester_object)
 
     def delete(self, ingester_object):

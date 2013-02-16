@@ -1,6 +1,6 @@
 __author__ = 'Casey Bajema'
 
-from jcudc24ingesterapi import typed, APIDomainObject
+from jcudc24ingesterapi import typed, APIDomainObject, ValidationError
 from jcudc24ingesterapi.schemas.data_types import DataType
 
 class TypedList(list):
@@ -72,6 +72,11 @@ class Schema(APIDomainObject):
             tmp.append(v)
         self.__extends = tmp
         
-        
+    def validate(self):
+        valid = []
+        if self.name == None:
+            valid.append(ValidationError("name", "Name must be set"))
+        return valid
+    
     
     

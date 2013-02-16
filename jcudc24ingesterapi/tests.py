@@ -608,6 +608,12 @@ More"""
         self.assertEquals(1, len(loc_dict))
         self.assertEquals(-1, loc_dict[0]["correlationid"])
         
+    def test_unit_of_work_validation(self):
+        unit = UnitOfWork(None)
+        loc = Location(10, 11)
+        self.assertRaises(InvalidObjectError, unit.insert, loc)
+        loc.name = "test"
+        unit.insert(loc) # Should work now.
 
     def test_marshaller_data_entry_schema(self):
         schema = {'attributes': [{'units': None, 'description': None, 'name': 'file', 'class': 'file'}], 'id': None, 'class': 'data_entry_schema'}

@@ -1,5 +1,5 @@
 __author__ = 'Casey Bajema'
-from jcudc24ingesterapi import typed, APIDomainObject
+from jcudc24ingesterapi import typed, APIDomainObject, ValidationError
 from jcudc24ingesterapi.models.data_sources import _DataSource
 from jcudc24ingesterapi.models.locations import LocationOffset
 
@@ -18,14 +18,20 @@ class Dataset(APIDomainObject):
     enabled = typed("_enabled", bool, "Dataset enabled")
     description = typed("_description", (str,unicode), "Description of dataset")
 
-    def __init__(self, dataset_id=None, location=None, schema=None, data_source=None, sampling=None, redbox_uri=None, location_offset=None, enabled=False):
+    def __init__(self, dataset_id=None, location=None, schema=None, data_source=None, redbox_uri=None, location_offset=None, enabled=False):
         self.id = dataset_id
         self.location = location
         self.schema = schema                      # subclass of DataType
         self.data_source = data_source
         self.redbox_uri = redbox_uri                  # URL to the ReDBox collection.
-        self.sampling = sampling
         self.enabled = enabled
         self.description = None
         self.location_offset = location_offset
         
+    def validate(self):
+        valid = []
+        if self.location == None:
+            valid.append(ValidationError("location", "Location must be set"))
+        if self.schema == None:
+            valid.append(ValidationError("schema", "Schema must be set"))
+        return valid
