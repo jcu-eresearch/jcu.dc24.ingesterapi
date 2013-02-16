@@ -286,17 +286,32 @@ class IngesterPlatformAPI(object):
         :return: an array of file handles for all log files for that dataset.
         """
         return self.server.getIngesterEvents(dataset_id)
+
+    def getRegion(self, reg_id):
+        """
+        """
+        return self._marshaller.dict_to_obj(self.server.getRegion(reg_id))
     
     def getLocation(self, loc_id):
         """
         """
         return self._marshaller.dict_to_obj(self.server.getLocation(loc_id))
     
-
+    def getSchema(self, s_id):
+        """
+        """
+        return self._marshaller.dict_to_obj(self.server.getSchema(s_id))
+    
     def getDataset(self, ds_id):
         """
         """
         return self._marshaller.dict_to_obj(self.server.getDataset(ds_id))
+
+    def getDataEntry(self, ds_id, de_id):
+        """A data entry is uniquely identified by dataset id + data entry id.
+        
+        """
+        return self._marshaller.dict_to_obj(self.server.getDataEntry(ds_id, de_id))
     
     def reset(self):
         """Resets the service
