@@ -33,7 +33,7 @@ setup(name='jcu.dc24.ingesterapi',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          'setuptools', "sqlalchemy",
+          'setuptools', "sqlalchemy", "simplesos"
           # -*- Extra requirements: -*-
       ],
       entry_points={
