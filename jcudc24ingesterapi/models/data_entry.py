@@ -56,11 +56,13 @@ class FileObject(object):
     __xmlrpc_class__ = "file_object"
     
     mime_type = typed("_mime_type", str, "The mime type of the file")
+    file_name = typed("_file_name", str, "The original file name")
     
-    def __init__(self, f_path=None, f_handle=None, mime_type=None):
+    def __init__(self, f_path=None, f_handle=None, mime_type=None, file_name=None):
         self.f_handle = f_handle
         self.f_path = f_path
         self.mime_type = mime_type
+        self.file_name = file_name
     def __str__(self):
         ret = "FileObject("
         ret += "f_path: %s"%self.f_path if self.f_path != None else "f_handle: %s"%self.f_handle
