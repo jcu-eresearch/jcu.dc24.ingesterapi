@@ -11,13 +11,13 @@ class Dataset(APIDomainObject):
     __xmlrpc_class__ = "dataset"
     id = typed("_id", int)
     version = typed("_version", int)
-    running = typed("_running", bool)
     location = typed("_location", int, "ID of location for dataset")
     schema = typed("_schema", int, "ID of schema for dataset")
     data_source = typed("_data_source", _DataSource, "Data source used for ingesting")
     location_offset = typed("_location_offset", LocationOffset, "Offset from the locations frame of reference")
     redbox_uri = typed("_redbox_uri", (str,unicode), "Redbox URI")
     enabled = typed("_enabled", bool, "Dataset enabled")
+    running = typed("_running", bool, "Dataset running")
     description = typed("_description", (str,unicode), "Description of dataset")
 
     def __init__(self, dataset_id=None, location=None, schema=None, data_source=None, redbox_uri=None, location_offset=None, enabled=False):
