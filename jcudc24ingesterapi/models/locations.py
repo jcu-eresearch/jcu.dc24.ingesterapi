@@ -9,6 +9,7 @@ class Region(APIDomainObject):
     """
     __xmlrpc_class__ = "region"
     id = typed("_id", int)
+    version = typed("_version", int)
     name = typed("_name", (str,unicode) )
     region_points = typed("_region_points", (tuple, list))
     parent_region = typed("_parent_region", int)
@@ -33,6 +34,7 @@ class Location(APIDomainObject):
     __xmlrpc_class__ = "location"
     
     id = typed("_id", int)
+    version = typed("_version", int)
     name = typed("_name", (str,unicode))
     latitude = typed("_latitude", float)
     longitude = typed("_longitude", float)

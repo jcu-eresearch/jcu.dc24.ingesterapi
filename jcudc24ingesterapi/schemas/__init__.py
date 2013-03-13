@@ -44,6 +44,7 @@ class Schema(APIDomainObject):
     will overwrite previous values.
     """
     id = typed("_id", int)
+    version = typed("_version", int)
     name = typed("_name", (str, unicode) )
 
     def __init__(self, name=None):

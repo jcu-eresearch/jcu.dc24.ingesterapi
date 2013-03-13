@@ -10,6 +10,7 @@ class Dataset(APIDomainObject):
     """
     __xmlrpc_class__ = "dataset"
     id = typed("_id", int)
+    version = typed("_version", int)
     location = typed("_location", int, "ID of location for dataset")
     schema = typed("_schema", int, "ID of schema for dataset")
     data_source = typed("_data_source", _DataSource, "Data source used for ingesting")
