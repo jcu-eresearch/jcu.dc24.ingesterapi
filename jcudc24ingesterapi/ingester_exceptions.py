@@ -43,7 +43,7 @@ class InvalidObjectError(IngestPlatformError):
         self.errors = validation_errors
 
     def __str__(self):
-        return "\n".join(self.errors)
+        return "\n".join([str(e) for e in self.errors])
 
 class UnknownObjectError(IngestPlatformError):
     """

@@ -196,6 +196,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
                 called.append(True)
         
         loc = Location()
+        loc.name = "Test Loc1"
         loc.set_listener(loc_listener)
 
         work = self.ingester_platform.createUnitOfWork()
@@ -356,6 +357,7 @@ More"""
         self.assertIsNotNone(loc.id)
         
         file_schema = DataEntrySchema()
+        file_schema.name = "File Schema"
         file_schema.addAttr(FileDataType("file"))
         file_schema_id = unit.insert(file_schema)
 
@@ -592,6 +594,7 @@ More"""
     def test_unit_of_work_roundtrip(self):
         unit = UnitOfWork(None)
         loc = Location(10, 11)
+        loc.name = "Loc 1"
         unit.insert(loc)
         unit_dict = self.marshaller.obj_to_dict(unit)
         self.assertEquals("unit_of_work", unit_dict["class"])
