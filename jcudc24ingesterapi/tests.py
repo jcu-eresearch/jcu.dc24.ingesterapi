@@ -17,7 +17,8 @@ from jcudc24ingesterapi.authentication import CredentialsAuthentication
 from jcudc24ingesterapi.models.metadata import DatasetMetadataEntry
 from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
 from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling, CustomSampling
-from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError
+from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError,\
+    StaleObjectError
 from jcudc24ingesterapi.schemas.data_entry_schemas import DataEntrySchema
 
 class ProvisioningInterfaceTest(unittest.TestCase):
@@ -301,6 +302,13 @@ class TestIngesterPersistence(unittest.TestCase):
         # Now update the location
         loc1.name = "The Test Site"
         loc1.latitude = -19.0
+        
+        # Test that the version check is observed
+        self.assertEquals(1, loc1.version)
+        loc1.version = 0
+        self.assertRaises(StaleObjectError, self.ingester_platform.post, loc1)
+        
+        loc1.version = 1
         loc2 = self.ingester_platform.post(loc1)
         self.assertEqual(loc1.id, loc2.id, "")
         self.assertEqual(loc1.latitude, loc2.latitude, "latitude does not match")

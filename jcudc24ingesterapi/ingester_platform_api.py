@@ -5,9 +5,10 @@ import inspect
 import datetime
 import httplib
 import urlparse
+import logging
 
 from jcudc24ingesterapi import parse_timestamp, format_timestamp, typed,\
-    ValidationError
+    ValidationError, ingester_exceptions
 import jcudc24ingesterapi.models.dataset
 import jcudc24ingesterapi.models.locations
 import jcudc24ingesterapi.models.sampling
@@ -17,6 +18,8 @@ import jcudc24ingesterapi.schemas.metadata_schemas
 import jcudc24ingesterapi.schemas.data_entry_schemas
 import jcudc24ingesterapi.schemas.data_types
 from jcudc24ingesterapi.models.data_entry import FileObject, DataEntry
+
+logger = logging.getLogger(__name__)
 
 def get_properties(obj):
     """Returns a list of valid property names for this object"""
@@ -137,6 +140,27 @@ class Marshaller(object):
                     setattr(obj, k, x[k])
         return obj
 
+def translate_exception(e):
+    """Translate an exception from an XMLRPC fault into an actual exception"""
+    if not isinstance(e, xmlrpclib.Fault):
+        return e
+    
+    if e.faultCode == 99:
+        return ValueError(e.faultString)
+    
+    exception_factory = {}
+    
+    for cls in dir(ingester_exceptions):
+        cls = getattr(ingester_exceptions, cls)
+        if isinstance(cls, type) and hasattr(cls, "__xmlrpc_error__"):
+            exception_factory[cls.__xmlrpc_error__] = cls
+    
+    if e.faultCode in exception_factory:
+        return exception_factory[e.faultCode](e.faultString)
+    else:
+        logger.error("Unsupported exception returned by webservice: "+str(e))
+        return Exception(e.faultString)
+
 class IngesterPlatformAPI(object):
     """
     The ingester platform API's are intended to provide a simple way of provisioning ingesters for sensors
@@ -181,11 +205,14 @@ class IngesterPlatformAPI(object):
         :param ingester_object: Insert a new record if the ID isn't set, if the ID is set update the existing record.
         :return: The object passed in with the ID field set.
         """
-        if ingester_object.id is None:
-            return self.insert(ingester_object)
-        else:
-            return self.update(ingester_object)
-
+        try:
+            if ingester_object.id is None:
+                return self.insert(ingester_object)
+            else:
+                return self.update(ingester_object)
+        except Exception, e:
+            raise translate_exception(e)
+        
     def insert(self, ingester_object):
         """
         Create a new entry using the passed in object, the entry type will be based on the objects type.
@@ -193,7 +220,10 @@ class IngesterPlatformAPI(object):
         :param ingester_object: If the objects ID is set an exception will be thrown.
         :return: The object passed in with the ID field set.
         """
-        return self._marshaller.dict_to_obj(self.server.insert(self._marshaller.obj_to_dict(ingester_object)))
+        try:
+            return self._marshaller.dict_to_obj(self.server.insert(self._marshaller.obj_to_dict(ingester_object)))
+        except Exception, e:
+            raise translate_exception(e)
 
     def update(self, ingester_object):
         """
@@ -202,7 +232,10 @@ class IngesterPlatformAPI(object):
         :param ingester_object: If the passed in object doesn't have it's ID set an exception will be thrown.
         :return: The updated object (eg. :return == ingester_object should always be true on success).
         """
-        return self._marshaller.dict_to_obj(self.server.update(self._marshaller.obj_to_dict(ingester_object)))
+        try:
+            return self._marshaller.dict_to_obj(self.server.update(self._marshaller.obj_to_dict(ingester_object)))
+        except Exception, e:
+            raise translate_exception(e)
 
     def delete(self, ingester_object):
         """
@@ -214,69 +247,81 @@ class IngesterPlatformAPI(object):
         pass
     
     def search(self, object_type, criteria=None):
-        return self._marshaller.dict_to_obj(self.server.search(object_type, self._marshaller.obj_to_dict(criteria)))
+        try:
+            return self._marshaller.dict_to_obj(self.server.search(object_type, self._marshaller.obj_to_dict(criteria)))
+        except Exception, e:
+            raise translate_exception(e)
 
     def commit(self, unit):
         """Commit a unit of work
         :param unit: Unit of work which is going to be committed
         :return: No return
         """
-        to_upload = []
-        unit_dto = self._marshaller.obj_to_dict(unit)
-        
-        for obj in unit._to_update:
-            if not hasattr(obj, "data"): continue
-            for k in obj.data:
-                val = obj.data[k]
-                if not isinstance(val, FileObject): continue
-                to_upload.append( ( "%s:%d"%(obj.__xmlrpc_class__,obj.id), k, val) )
-
-        for obj in unit._to_insert:
-            if not hasattr(obj, "data"): continue
-            for k in obj.data:
-                val = obj.data[k]
-                if not isinstance(val, FileObject): continue
-                to_upload.append( ( "%s:%d"%(obj.__xmlrpc_class__,obj.id), k, val) )
-        
-        transaction_id = self.server.precommit(unit_dto)
-        # do uploads
-        
-        (proto, host, path, params, query, frag) = urlparse.urlparse(self.service_url)
-        c = httplib.HTTPConnection(host)
-        for oid, attr, file_obj in to_upload:
-            if file_obj.f_handle != None:
-                f_handle = file_obj.f_handle
-            else:
-                f_handle = open(file_obj.f_path, "rb")
-            c.request('POST', "%s/%s/%s/%s"%(path, transaction_id, oid, attr), f_handle, 
-                      {"Content-Type":"application/octet-stream"})
-            r = c.getresponse()
-            r.close()
-            if r.status != 200:
-                raise Exception("Error uploading data files")
-            f_handle.close()
-        c.close()
-        
-        results = self.server.commit(transaction_id)
-        
-        lookup = {}
-        for result in results: lookup[result["correlationid"]] = result
-        for obj in unit._to_update:
-            if obj.id not in lookup: continue
-            self._marshaller.dict_to_obj(lookup[obj.id], obj)
-        for obj in unit._to_insert:
-            if obj.id not in lookup: continue
-            self._marshaller.dict_to_obj(lookup[obj.id], obj)
+        try:
+            to_upload = []
+            unit_dto = self._marshaller.obj_to_dict(unit)
+            
+            for obj in unit._to_update:
+                if not hasattr(obj, "data"): continue
+                for k in obj.data:
+                    val = obj.data[k]
+                    if not isinstance(val, FileObject): continue
+                    to_upload.append( ( "%s:%d"%(obj.__xmlrpc_class__,obj.id), k, val) )
+    
+            for obj in unit._to_insert:
+                if not hasattr(obj, "data"): continue
+                for k in obj.data:
+                    val = obj.data[k]
+                    if not isinstance(val, FileObject): continue
+                    to_upload.append( ( "%s:%d"%(obj.__xmlrpc_class__,obj.id), k, val) )
+            
+            transaction_id = self.server.precommit(unit_dto)
+            # do uploads
+            
+            (proto, host, path, params, query, frag) = urlparse.urlparse(self.service_url)
+            c = httplib.HTTPConnection(host)
+            for oid, attr, file_obj in to_upload:
+                if file_obj.f_handle != None:
+                    f_handle = file_obj.f_handle
+                else:
+                    f_handle = open(file_obj.f_path, "rb")
+                c.request('POST', "%s/%s/%s/%s"%(path, transaction_id, oid, attr), f_handle, 
+                          {"Content-Type":"application/octet-stream"})
+                r = c.getresponse()
+                r.close()
+                if r.status != 200:
+                    raise Exception("Error uploading data files")
+                f_handle.close()
+            c.close()
+            
+            results = self.server.commit(transaction_id)
+            
+            lookup = {}
+            for result in results: lookup[result["correlationid"]] = result
+            for obj in unit._to_update:
+                if obj.id not in lookup: continue
+                self._marshaller.dict_to_obj(lookup[obj.id], obj)
+            for obj in unit._to_insert:
+                if obj.id not in lookup: continue
+                self._marshaller.dict_to_obj(lookup[obj.id], obj)
+        except Exception, e:
+            raise translate_exception(e)
 
     def enableDataset(self, dataset_id):
         """
         """
-        return self.server.enableDataset(dataset_id)
+        try:
+            return self.server.enableDataset(dataset_id)
+        except Exception, e:
+            raise translate_exception(e)
     
     def disableDataset(self, dataset_id):
         """
         """
-        return self.server.disableDataset(dataset_id)
+        try:
+            return self.server.disableDataset(dataset_id)
+        except Exception, e:
+            raise translate_exception(e)
 
     def getIngesterEvents(self, dataset_id):
         """
@@ -290,28 +335,43 @@ class IngesterPlatformAPI(object):
     def getRegion(self, reg_id):
         """
         """
-        return self._marshaller.dict_to_obj(self.server.getRegion(reg_id))
+        try:
+            return self._marshaller.dict_to_obj(self.server.getRegion(reg_id))
+        except Exception, e:
+            raise translate_exception(e)
     
     def getLocation(self, loc_id):
         """
         """
-        return self._marshaller.dict_to_obj(self.server.getLocation(loc_id))
+        try:
+            return self._marshaller.dict_to_obj(self.server.getLocation(loc_id))
+        except Exception, e:
+            raise translate_exception(e)
     
     def getSchema(self, s_id):
         """
         """
-        return self._marshaller.dict_to_obj(self.server.getSchema(s_id))
+        try:
+            return self._marshaller.dict_to_obj(self.server.getSchema(s_id))
+        except Exception, e:
+            raise translate_exception(e)
     
     def getDataset(self, ds_id):
         """
         """
-        return self._marshaller.dict_to_obj(self.server.getDataset(ds_id))
+        try:
+            return self._marshaller.dict_to_obj(self.server.getDataset(ds_id))
+        except Exception, e:
+            raise translate_exception(e)
 
     def getDataEntry(self, ds_id, de_id):
         """A data entry is uniquely identified by dataset id + data entry id.
         
         """
-        return self._marshaller.dict_to_obj(self.server.getDataEntry(ds_id, de_id))
+        try:
+            return self._marshaller.dict_to_obj(self.server.getDataEntry(ds_id, de_id))
+        except Exception, e:
+            raise translate_exception(e)
     
     def reset(self):
         """Resets the service
@@ -321,7 +381,10 @@ class IngesterPlatformAPI(object):
     def findDatasets(self, **kwargs):
         """Search for datasets
         """
-        return self._marshaller.dict_to_obj(self.server.findDatasets(kwargs))
+        try:
+            return self._marshaller.dict_to_obj(self.server.findDatasets(kwargs))
+        except Exception, e:
+            raise translate_exception(e)
         
     def createUnitOfWork(self):
         """Creates a unit of work object that can be used to create transactional consistent set of operations

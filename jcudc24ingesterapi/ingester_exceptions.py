@@ -1,3 +1,4 @@
+from jcudc24ingesterapi import ValidationError
 __author__ = 'Casey Bajema'
 
 class IngestPlatformError(Exception):
@@ -40,6 +41,11 @@ class InvalidObjectError(IngestPlatformError):
     """
     __xmlrpc_error__ = 4
     def __init__(self, validation_errors):
+        if not isinstance(validation_errors, list):
+            raise ValueError("Must pass a list of ValidationError objects")
+        for e in validation_errors:
+            if not isinstance(e, ValidationError):
+                raise ValueError("Must pass a list of ValidationError objects")
         self.errors = validation_errors
 
     def __str__(self):
@@ -67,12 +73,22 @@ class AuthenticationError(IngestPlatformError):
     def __str__(self):
         return repr(self.message)
 
-class InvalidCall(IngestPlatformError):
+class PersistenceError(IngestPlatformError):
     """
     Thrown when an API method call cannot be completed because it would corrupt the data state (eg. deleting a location
     that  quality data associated with it).
     """
     __xmlrpc_error__ = 7
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
+class StaleObjectError(PersistenceError):
+    """Thrown when an object the object being persisted has already been updated.
+    """
+    __xmlrpc_error__ = 8
     def __init__(self, message):
         self.message = message
 
