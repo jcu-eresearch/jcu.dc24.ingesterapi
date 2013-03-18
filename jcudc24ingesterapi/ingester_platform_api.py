@@ -9,6 +9,7 @@ import logging
 
 from jcudc24ingesterapi import parse_timestamp, format_timestamp, typed,\
     ValidationError, ingester_exceptions
+import jcudc24ingesterapi.models.system
 import jcudc24ingesterapi.models.dataset
 import jcudc24ingesterapi.models.locations
 import jcudc24ingesterapi.models.sampling
@@ -39,6 +40,7 @@ class Marshaller(object):
         self.scanPackage(jcudc24ingesterapi.models.data_sources)
         self.scanPackage(jcudc24ingesterapi.models.data_entry)
         self.scanPackage(jcudc24ingesterapi.models.metadata)
+        self.scanPackage(jcudc24ingesterapi.models.system)
         self.scanPackage(jcudc24ingesterapi.schemas.metadata_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_entry_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_types)
@@ -330,7 +332,11 @@ class IngesterPlatformAPI(object):
         :param dataset_id: ID of the dataset to get ingester logs for
         :return: an array of file handles for all log files for that dataset.
         """
-        return self.server.getIngesterEvents(dataset_id)
+        try:
+            return self._marshaller.dict_to_obj(self.server.getIngesterEvents(dataset_id))
+        except Exception, e:
+            raise translate_exception(e)
+
 
     def getRegion(self, reg_id):
         """
