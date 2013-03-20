@@ -325,7 +325,7 @@ class IngesterPlatformAPI(object):
         except Exception, e:
             raise translate_exception(e)
 
-    def getIngesterEvents(self, dataset_id):
+    def getIngesterLogs(self, dataset_id):
         """
         Get all ingester logs for a single dataset.
 
@@ -333,7 +333,7 @@ class IngesterPlatformAPI(object):
         :return: an array of file handles for all log files for that dataset.
         """
         try:
-            return self._marshaller.dict_to_obj(self.server.getIngesterEvents(dataset_id))
+            return self._marshaller.dict_to_obj(self.server.getIngesterLogs(dataset_id))
         except Exception, e:
             raise translate_exception(e)
 
