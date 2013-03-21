@@ -94,3 +94,17 @@ class StaleObjectError(PersistenceError):
 
     def __str__(self):
         return repr(self.message)
+
+
+class OperationFailedException(IngestPlatformError):
+    """
+    Thrown when an operation fails to execute as expected.
+    """
+    __xmlrpc_error__ = 9
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
+
