@@ -6,6 +6,7 @@ import datetime
 import httplib
 import urlparse
 import logging
+import base64
 
 from jcudc24ingesterapi import parse_timestamp, format_timestamp, typed,\
     ValidationError, ingester_exceptions
@@ -190,8 +191,13 @@ class IngesterPlatformAPI(object):
         """
         if not service_url.startswith("http://") and not service_url.startswith("https://"):
             raise ValueError("Invalid server URL specified")
+        url_obj = urlparse.urlparse(service_url)
         self.service_url = service_url
-        self.server = xmlrpclib.ServerProxy(service_url, allow_none=True)
+        if auth == None:
+            connection_url = "%s://%s%s"%(url_obj[0], url_obj[1], url_obj[2])
+        else:
+            connection_url = "%s://%s:%s@%s%s"%(url_obj[0], auth.username, auth.password, url_obj[1], url_obj[2])
+        self.server = xmlrpclib.ServerProxy(connection_url, allow_none=True)
         self.auth = auth
         self._marshaller = Marshaller()
 
@@ -282,13 +288,16 @@ class IngesterPlatformAPI(object):
             
             (proto, host, path, params, query, frag) = urlparse.urlparse(self.service_url)
             c = httplib.HTTPConnection(host)
+            headers = {"Content-Type":"application/octet-stream"}
+            if self.auth != None:
+                headers["Authorization"] = "Basic %s"%(base64.b64encode("%s:%s"%(self.auth.username, self.auth.password)))
             for oid, attr, file_obj in to_upload:
                 if file_obj.f_handle != None:
                     f_handle = file_obj.f_handle
                 else:
                     f_handle = open(file_obj.f_path, "rb")
                 c.request('POST', "%s/%s/%s/%s"%(path, transaction_id, oid, attr), f_handle, 
-                          {"Content-Type":"application/octet-stream"})
+                          headers)
                 r = c.getresponse()
                 r.close()
                 if r.status != 200:
