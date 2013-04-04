@@ -110,6 +110,8 @@ class FormDataSource(_DataSource):
 
     The data entry's will be passed to the ingester platform through the API as data_entry objects.
     """
+
+    __xmlrpc_class__ = "form_data_source"
     pass
 
 

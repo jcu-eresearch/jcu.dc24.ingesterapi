@@ -3,7 +3,7 @@ __author__ = 'Casey Bajema'
 import re
 from jcudc24ingesterapi import typed
 
-RE_ATTR_NAME = re.compile("^[A-Za-z][A-Za-z0-9]*$")
+RE_ATTR_NAME = re.compile("^[A-Za-z][A-Za-z0-9_]*$")
 
 class DataType(object):
     """

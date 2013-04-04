@@ -1,3 +1,4 @@
+
 import datetime
 import jcudc24ingesterapi
 import os
@@ -45,9 +46,11 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         loc2 = Location(11.0, 11.0, "Test Site", 100)
         loc3 = Location(12.0, 11.0, "Test Site", 100)
 
-        temperature_schema = DataEntrySchema()
+        temp_work = self.ingester_platform.createUnitOfWork()
+        temperature_schema = DataEntrySchema("Test Temp Schema")
         temperature_schema.addAttr(Double("temperature"))   
-        temperature_schema = self.ingester_platform.post(temperature_schema)
+        temperature_schema = temp_work.post(temperature_schema)
+        temp_work.commit()
         
         file_schema = DataEntrySchema()
         file_schema.addAttr(FileDataType("file"))
