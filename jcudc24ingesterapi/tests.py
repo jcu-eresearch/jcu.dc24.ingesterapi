@@ -49,8 +49,13 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         temp_work = self.ingester_platform.createUnitOfWork()
         temperature_schema = DataEntrySchema("Test Temp Schema")
         temperature_schema.addAttr(Double("temperature"))   
-        temperature_schema = temp_work.post(temperature_schema)
+        temp_work.post(temperature_schema)
         temp_work.commit()
+
+        # Check the name is set
+        temperature_schema_1 = self.ingester_platform.getSchema(temperature_schema.id)
+        self.assertIsNotNone(temperature_schema.name)
+        self.assertEquals(temperature_schema.name, temperature_schema_1.name)
         
         file_schema = DataEntrySchema()
         file_schema.addAttr(FileDataType("file"))
