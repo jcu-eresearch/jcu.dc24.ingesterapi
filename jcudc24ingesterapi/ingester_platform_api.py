@@ -69,29 +69,31 @@ class Marshaller(object):
         elif not self._classes.has_key(type(obj)):
             raise ValueError("This object class is not supported: " + str(obj.__class__))
         ret = {}
+
+        data_keys = get_properties(obj)
+
+        for k in data_keys:
+            v = getattr(obj, k)
+            if k in ("attrs", "extends") and isinstance(obj, jcudc24ingesterapi.schemas.Schema): continue
+            if type(v) == datetime.datetime:
+                ret[k] = format_timestamp(v)
+            elif isinstance(v, dict):
+                ret[k] = {}
+                for k1 in v:
+                    ret[k][k1] = self.obj_to_dict(v[k1])
+            else:
+                ret[k] = self.obj_to_dict(v)
+
+        for k in special_attrs:
+            ret[k] = getattr(obj, k)
+
         if isinstance(obj, jcudc24ingesterapi.schemas.Schema):
             ret["attributes"] = []
             for k in obj.attrs:
                 attr = obj.attrs[k]
                 ret["attributes"].append({"class":attr.__xmlrpc_class__, "name":attr.name, 
                                           "description":attr.description, "units":attr.units})
-            if hasattr(obj, "id"):
-                ret["id"] = obj.id
-        else:
-            data_keys = get_properties(obj)
-
-            for k in data_keys:
-                v = getattr(obj, k)
-                if type(v) == datetime.datetime:
-                    ret[k] = format_timestamp(v)
-                elif isinstance(v, dict):
-                    ret[k] = {}
-                    for k1 in v:
-                        ret[k][k1] = self.obj_to_dict(v[k1])
-                else:
-                    ret[k] = self.obj_to_dict(v)
-        for k in special_attrs:
-            ret[k] = getattr(obj, k)
+            ret["extends"] = [] + obj.extends
             
         ret["class"] = self._classes[type(obj)]
         return ret
