@@ -210,7 +210,7 @@ class IngesterPlatformAPI(object):
 
     def post(self, ingester_object):
         """
-        Create a new entry using the passed in object, the entry type will be based on the objects type.
+        Create a new entry or update an existing entry using the passed in object, the entry type will be based on the objects type.
 
         :param ingester_object: Insert a new record if the ID isn't set, if the ID is set update the existing record.
         :return: The object passed in with the ID field set.
@@ -321,7 +321,7 @@ class IngesterPlatformAPI(object):
             raise translate_exception(e)
 
     def enableDataset(self, dataset_id):
-        """
+        """Enable data ingestion for this dataset.
         """
         try:
             return self.server.enableDataset(dataset_id)
@@ -329,7 +329,7 @@ class IngesterPlatformAPI(object):
             raise translate_exception(e)
     
     def disableDataset(self, dataset_id):
-        """
+        """Disable data ingestion for this dataset.
         """
         try:
             return self.server.disableDataset(dataset_id)
@@ -350,7 +350,7 @@ class IngesterPlatformAPI(object):
 
 
     def getRegion(self, reg_id):
-        """
+        """Get the region object specified by the given id.
         """
         try:
             return self._marshaller.dict_to_obj(self.server.getRegion(reg_id))
@@ -358,7 +358,7 @@ class IngesterPlatformAPI(object):
             raise translate_exception(e)
     
     def getLocation(self, loc_id):
-        """
+        """Get the location object specified by the given id.
         """
         try:
             return self._marshaller.dict_to_obj(self.server.getLocation(loc_id))
@@ -366,7 +366,7 @@ class IngesterPlatformAPI(object):
             raise translate_exception(e)
     
     def getSchema(self, s_id):
-        """
+        """Get the schema object specified by the given id.
         """
         try:
             return self._marshaller.dict_to_obj(self.server.getSchema(s_id))
@@ -374,7 +374,7 @@ class IngesterPlatformAPI(object):
             raise translate_exception(e)
     
     def getDataset(self, ds_id):
-        """
+        """Get the dataset object specified by the given id.
         """
         try:
             return self._marshaller.dict_to_obj(self.server.getDataset(ds_id))
@@ -409,6 +409,10 @@ class IngesterPlatformAPI(object):
         return UnitOfWork(self)
 
     def close(self):
+        """
+        Close should always be called when finished with the IngesterPlatformAPI to allow it to clean up any related data.
+        :return:
+        """
         pass
 
 class UnitOfWork(object):

@@ -115,4 +115,24 @@ class FormDataSource(_DataSource):
     pass
 
 
+class DataTurbineDataSource(_DataSource):
+    """
+    A data source that implements a data turbine sink.
+    """
+    __xmlrpc_class__ = "data_turbine_data_source"
+    url = typed("_url", (str,unicode), "URL of the directory to scan")
+    mime_type = typed("_mime_type", (str,unicode), "Mime type of the channels to read from.")
+    data_type = typed("_data_type", (str,unicode), "What type data will be read from data turbine as (eg Float32)")
+    field = typed("_field", (str,unicode), "Field name to ingest into")
+    sampling = typed("_sampling", _Sampling, "Script to run to determine when to sample")
+    def __init__(self, url=None, pattern=None, recursive=False, mime_type=None, field=None, processing_script=None, sampling=None):
+        """Initialise the PullDataSource with a URI for the source file, and the field that
+        the uri will be saved to.
+        """
+        self.url = url
+        self.field = field
+        self.mime_type = mime_type
+        self.data_type = data_type
+        self.processing_script = processing_script
+        self.sampling = sampling
 
