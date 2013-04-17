@@ -125,7 +125,7 @@ class DataTurbineDataSource(_DataSource):
     data_type = typed("_data_type", (str,unicode), "What type data will be read from data turbine as (eg Float32)")
     field = typed("_field", (str,unicode), "Field name to ingest into")
     sampling = typed("_sampling", _Sampling, "Script to run to determine when to sample")
-    def __init__(self, url=None, pattern=None, recursive=False, mime_type=None, field=None, processing_script=None, sampling=None):
+    def __init__(self, url=None, data_type=False, mime_type=None, field=None, processing_script=None, sampling=None):
         """Initialise the PullDataSource with a URI for the source file, and the field that
         the uri will be saved to.
         """
