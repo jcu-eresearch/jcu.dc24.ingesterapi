@@ -1,4 +1,6 @@
 
+
+
 import datetime
 import jcudc24ingesterapi
 import os
@@ -17,7 +19,7 @@ from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marsha
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
 from jcudc24ingesterapi.models.metadata import DatasetMetadataEntry
 from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
-from jcudc24ingesterapi.models.sampling import RepeatSampling, PeriodicSampling, CustomSampling
+from jcudc24ingesterapi.models.sampling import PeriodicSampling #, CustomSampling, RepeatSampling
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError,\
     StaleObjectError
 from jcudc24ingesterapi.schemas.data_entry_schemas import DataEntrySchema
@@ -48,9 +50,13 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
         temp_work = self.ingester_platform.createUnitOfWork()
         temperature_schema = DataEntrySchema("Test Temp Schema")
-        temperature_schema.addAttr(Double("temperature"))   
+        temperature_schema.addAttr(Double("temperature"))
         temp_work.post(temperature_schema)
         temp_work.commit()
+
+        air_temperature_schema = DataEntrySchema("Air Temp Schema")
+        air_temperature_schema.extends = [temperature_schema.id]
+        self.ingester_platform.post(air_temperature_schema)
 
         # Check the name is set
         temperature_schema_1 = self.ingester_platform.getSchema(temperature_schema.id)
