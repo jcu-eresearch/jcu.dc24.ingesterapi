@@ -56,11 +56,11 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
         air_temperature_schema = DataEntrySchema("Air Temp Schema")
         air_temperature_schema.extends = [temperature_schema.id]
-        self.ingester_platform.post(air_temperature_schema)
+        air_temperature_schema = self.ingester_platform.post(air_temperature_schema)
 
         second_level_inheritence_schema = DataEntrySchema("Second Inheritence")
         second_level_inheritence_schema.extends = [air_temperature_schema.id]
-        self.ingester_platform.post(second_level_inheritence_schema)
+        second_level_inheritence_schema = self.ingester_platform.post(second_level_inheritence_schema)
 
         # Check the name is set
         temperature_schema_1 = self.ingester_platform.getSchema(temperature_schema.id)
@@ -181,6 +181,44 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         work.delete(dataset1.id)
         work.delete(dataset2.id)
         work.commit()
+        
+    def test_parent_schemas(self):
+        """This test creates a nested schema with attributes provided at 2
+        different levels. A data entry is saved, and then retrieved, and the
+        values tested.
+        """
+        loc1 = self.ingester_platform.post(Location(11.0, 11.0, "Test Site", 100))
+
+        temp_work = self.ingester_platform.createUnitOfWork()
+        temperature_schema = DataEntrySchema("Test Temp Schema")
+        temperature_schema.addAttr(Double("temperature"))
+        temp_work.post(temperature_schema)
+        temp_work.commit()
+
+        air_temperature_schema = DataEntrySchema("Air Temp Schema")
+        air_temperature_schema.extends = [temperature_schema.id]
+        air_temperature_schema = self.ingester_platform.post(air_temperature_schema)
+
+        instrument_schema = DataEntrySchema("Instrument Schema")
+        instrument_schema.extends = [air_temperature_schema.id]
+        instrument_schema.addAttr(Double("var2"))
+        instrument_schema = self.ingester_platform.post(instrument_schema)
+
+        dataset = Dataset(location=loc1.id, schema=instrument_schema.id)
+        dataset = self.ingester_platform.post(dataset)
+        
+        work = self.ingester_platform.createUnitOfWork()
+        data_entry = DataEntry(dataset.id, datetime.datetime.now())
+        data_entry["temperature"] = 10
+        data_entry["var2"] = 11
+        work.post(data_entry)
+        work.commit()
+        
+        data_entry_ret = self.ingester_platform.getDataEntry(dataset.id, data_entry.id)
+
+        self.assertEquals(data_entry["temperature"], data_entry_ret["temperature"])
+        self.assertEquals(data_entry["var2"], data_entry_ret["var2"])
+        
 
     def testMultiDatasetExtraction(self):
         """This test demonstrates use case #402.

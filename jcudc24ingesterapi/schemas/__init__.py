@@ -1,7 +1,9 @@
 __author__ = 'Casey Bajema'
-
+import logging
 from jcudc24ingesterapi import typed, APIDomainObject, ValidationError
 from jcudc24ingesterapi.schemas.data_types import DataType
+
+logger = logging.getLogger(__name__)
 
 class TypedList(list):
     def __init__(self, valid_type):
@@ -79,5 +81,24 @@ class Schema(APIDomainObject):
             valid.append(ValidationError("name", "Name must be set"))
         return valid
     
-    
-    
+class ConcreteSchema(object):
+    """The concrete schema composites all the individual schemas into
+    a domain object. 
+    """
+    def __init__(self, schemas=None):
+        if schemas == None: schemas = []
+        self.__attrs = SchemaAttrDict() 
+
+        # Add all the passed schemas to the concrete schema
+        for schema in schemas:
+            self.add(schema)
+            
+    def add(self, schema):
+        """Add all the attributes to the concrete schema's list"""
+        for attr in schema.attrs:
+            if attr in self.__attrs: raise ValueError("Duplicate attributes: " + attr)
+            self.__attrs[attr] = schema.attrs[attr]
+
+    @property
+    def attrs(self):
+        return self.__attrs
