@@ -23,6 +23,7 @@ from jcudc24ingesterapi.models.sampling import PeriodicSampling #, CustomSamplin
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError,\
     StaleObjectError
 from jcudc24ingesterapi.schemas.data_entry_schemas import DataEntrySchema
+from jcudc24ingesterapi.search import DataEntrySearchCriteria
 
 class ProvisioningInterfaceTest(unittest.TestCase):
     """
@@ -106,19 +107,39 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         found_dataset_id = dataset1.id                  # The dataset that has an extended file schema
 
 #       User manually enters data
-        data_entry_1 = DataEntry(found_dataset_id, datetime.datetime.now())
+        timestamp = datetime.datetime.now()
+        data_entry_1 = DataEntry(found_dataset_id, timestamp)
         data_entry_1['temperature'] = 27.8                # Add the extended schema items
         data_entry_1 = self.ingester_platform.post(data_entry_1)
         self.assertIsNotNone(data_entry_1.id)
 
+        timestamp2 = timestamp + datetime.timedelta(seconds=1)
+        data_entry_2 = DataEntry(found_dataset_id, timestamp2)
+        data_entry_2['temperature'] = 27.8                # Add the extended schema items
+        data_entry_2 = self.ingester_platform.post(data_entry_2)
+        
+        self.assertEquals(2, len(self.ingester_platform.search("data_entry", 10, criteria=DataEntrySearchCriteria(found_dataset_id))))
+        self.assertEquals(1, len(self.ingester_platform.search("data_entry", 1, criteria=DataEntrySearchCriteria(found_dataset_id))))
+                
+        self.assertEquals(0, len(self.ingester_platform.search("data_entry", 10,
+                                 criteria=DataEntrySearchCriteria(found_dataset_id, 
+                                 end_time=timestamp-datetime.timedelta(seconds=60)))))
+        self.assertEquals(0, len(self.ingester_platform.search("data_entry", 10,
+                                 criteria=DataEntrySearchCriteria(found_dataset_id, 
+                                 start_time=timestamp+datetime.timedelta(seconds=60)))))
+        self.assertEquals(2, len(self.ingester_platform.search("data_entry", 10,
+                                 criteria=DataEntrySearchCriteria(found_dataset_id, 
+                                 start_time=timestamp-datetime.timedelta(seconds=60),
+                                 end_time=timestamp+datetime.timedelta(seconds=60)))))
+
         work = self.ingester_platform.createUnitOfWork()
-        data_entry_2 = DataEntry(dataset2.id, datetime.datetime.now())
-        data_entry_2['file'] = FileObject(f_handle=open(os.path.join(
+        data_entry_3 = DataEntry(dataset2.id, datetime.datetime.now())
+        data_entry_3['file'] = FileObject(f_handle=open(os.path.join(
                     os.path.dirname(jcudc24ingesterapi.__file__), "tests/test_ingest.xml")), 
                     mime_type="text/xml")
-        work.post(data_entry_2)
+        work.post(data_entry_3)
         work.commit()
-        self.assertIsNotNone(data_entry_2.id)
+        self.assertIsNotNone(data_entry_3.id)
 
 #       User enters quality assurance metadata
         quality_metadata_schema = DatasetMetadataSchema()

@@ -19,6 +19,7 @@ import jcudc24ingesterapi.models.metadata
 import jcudc24ingesterapi.schemas.metadata_schemas
 import jcudc24ingesterapi.schemas.data_entry_schemas
 import jcudc24ingesterapi.schemas.data_types
+import jcudc24ingesterapi.search
 from jcudc24ingesterapi.models.data_entry import FileObject, DataEntry
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class Marshaller(object):
         self.scanPackage(jcudc24ingesterapi.models.data_entry)
         self.scanPackage(jcudc24ingesterapi.models.metadata)
         self.scanPackage(jcudc24ingesterapi.models.system)
+        self.scanPackage(jcudc24ingesterapi.search)
         self.scanPackage(jcudc24ingesterapi.schemas.metadata_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_entry_schemas)
         self.scanPackage(jcudc24ingesterapi.schemas.data_types)
@@ -256,9 +258,9 @@ class IngesterPlatformAPI(object):
         """
         pass
     
-    def search(self, object_type, criteria=None):
+    def search(self, object_type, limit, criteria=None):
         try:
-            return self._marshaller.dict_to_obj(self.server.search(object_type, self._marshaller.obj_to_dict(criteria)))
+            return self._marshaller.dict_to_obj(self.server.search(object_type, limit, self._marshaller.obj_to_dict(criteria)))
         except Exception, e:
             raise translate_exception(e)
 
