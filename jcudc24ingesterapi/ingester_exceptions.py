@@ -108,3 +108,16 @@ class OperationFailedException(IngestPlatformError):
         return repr(self.message)
 
 
+class InternalSystemError(IngestPlatformError):
+    """
+    Thrown when an unexpected exception occurs. The server logs should be
+    checked.
+    """
+    __xmlrpc_error__ = 10
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
+
