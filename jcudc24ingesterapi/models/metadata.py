@@ -15,7 +15,7 @@ class MetadataEntry(APIDomainObject):
     """
     id = typed("_id", int, "An identifier for the data entry")
     object_id = typed("_object_id", int, "An identifier for the object data entry")
-    metadata_schema = typed("_dataset", int, "The dataset ID")
+    metadata_schema = typed("_dataset", int, "The schema ID")
     data = typed("_data", dict, "Data storage")
 
     def __init__(self, object_id = None, metadata_schema_id=None, id = None, **kwargs):
