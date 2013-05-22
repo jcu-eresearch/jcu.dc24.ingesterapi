@@ -125,7 +125,9 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         self.assertEquals(2, result.count)
         self.assertEquals(1, len(result.results))
         self.assertEquals(1, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 1, 1).results))
-        self.assertEquals(0, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 2, 1).results))
+        
+        result = self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 2, 1)
+        self.assertEquals(0, len(result.results))
                 
         self.assertEquals(0, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id, 
                                  end_time=timestamp-datetime.timedelta(seconds=60)), 0, 10).results))
@@ -143,6 +145,12 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         work.post(data_entry_3)
         work.commit()
         self.assertIsNotNone(data_entry_3.id)
+        
+        f_in = self.ingester_platform.getDataEntryStream(dataset2.id, data_entry_3.id, "file")
+        self.assertIsNotNone(f_in)
+        data = f_in.read()
+        f_in.close()
+        self.assertLess(0, len(data), "Expected data in file")
 
 #       User enters quality assurance metadata
         quality_metadata_schema = DatasetMetadataSchema()

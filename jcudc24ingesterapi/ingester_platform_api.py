@@ -1,9 +1,11 @@
-from jcudc24ingesterapi.ingester_exceptions import InvalidObjectError
+from jcudc24ingesterapi.ingester_exceptions import InvalidObjectError,\
+    InternalSystemError
 __author__ = 'Casey Bajema'
 import xmlrpclib
 import inspect
 import datetime
 import httplib
+import urllib2
 import urlparse
 import logging
 import base64
@@ -389,6 +391,27 @@ class IngesterPlatformAPI(object):
         """
         try:
             return self._marshaller.dict_to_obj(self.server.getDataEntry(ds_id, de_id))
+        except Exception, e:
+            raise translate_exception(e)
+        
+    def getDataEntryStream(self, ds_id, de_id, attr):
+        """A data entry stream is uniquely identified by dataset id + data entry id + attribute name.
+        
+        """
+        try:
+            req = urllib2.Request("%s/data_entry/%s/%s/%s"%(self.service_url, ds_id, de_id, attr))
+            if self.auth != None:
+                req.add_header("Authorization" ,"Basic %s"%base64.b64encode("%s:%s"%(self.auth.username, self.auth.password)))
+            resp = urllib2.urlopen(req)
+            if resp.getcode == 404:
+                resp.close()
+                return None
+            elif resp.code == 200:
+                return resp
+            else:
+                resp.close()
+                raise InternalSystemError("Error getting stream, got code " + resp.getcode)
+
         except Exception, e:
             raise translate_exception(e)
     
