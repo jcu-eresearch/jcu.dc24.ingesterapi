@@ -91,3 +91,20 @@ class DatasetMetadataSchemaSearchCriteria(APIDomainObject):
     
     def __init__(self):
         pass
+
+
+class SearchResults(APIDomainObject):
+    """The results of a search method call"""
+    __xmlrpc_class__ = "search_results"
+    
+    count = typed("_count", int, "Total number of results")
+    offset = typed("_dataset", int, "Offset from the start of the results")
+    limit = typed("_limit", int, "Maximum number of results to return")
+    results = typed("_results", list, "Actual result objects")
+    
+    def __init__(self, results=None, offset=None, limit=None, count=None):
+        self.results = results
+        self.offset = offset
+        self.limit = limit
+        self.count = count
+        

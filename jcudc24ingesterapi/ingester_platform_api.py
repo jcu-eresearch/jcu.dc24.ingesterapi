@@ -258,9 +258,9 @@ class IngesterPlatformAPI(object):
         """
         pass
     
-    def search(self, criteria, limit):
+    def search(self, criteria, offset, limit):
         try:
-            return self._marshaller.dict_to_obj(self.server.search(self._marshaller.obj_to_dict(criteria), limit))
+            return self._marshaller.dict_to_obj(self.server.search(self._marshaller.obj_to_dict(criteria), offset, limit))
         except Exception, e:
             raise translate_exception(e)
 

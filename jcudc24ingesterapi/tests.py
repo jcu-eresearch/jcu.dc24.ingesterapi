@@ -120,16 +120,20 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         data_entry_2['temperature'] = 27.8                # Add the extended schema items
         data_entry_2 = self.ingester_platform.post(data_entry_2)
         
-        self.assertEquals(2, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 10)))
-        self.assertEquals(1, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 1)))
+        self.assertEquals(2, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 0, 10).results))
+        result = self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 0, 1)
+        self.assertEquals(2, result.count)
+        self.assertEquals(1, len(result.results))
+        self.assertEquals(1, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 1, 1).results))
+        self.assertEquals(0, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id), 2, 1).results))
                 
         self.assertEquals(0, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id, 
-                                 end_time=timestamp-datetime.timedelta(seconds=60)), 10)))
+                                 end_time=timestamp-datetime.timedelta(seconds=60)), 0, 10).results))
         self.assertEquals(0, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id, 
-                                 start_time=timestamp+datetime.timedelta(seconds=60)), 10)))
+                                 start_time=timestamp+datetime.timedelta(seconds=60)), 0, 10).results))
         self.assertEquals(2, len(self.ingester_platform.search(DataEntrySearchCriteria(found_dataset_id, 
                                  start_time=timestamp-datetime.timedelta(seconds=60),
-                                 end_time=timestamp+datetime.timedelta(seconds=60)), 10)))
+                                 end_time=timestamp+datetime.timedelta(seconds=60)), 0, 10).results))
 
         work = self.ingester_platform.createUnitOfWork()
         data_entry_3 = DataEntry(dataset2.id, datetime.datetime.now())
@@ -155,7 +159,7 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         entered_metadata = self.ingester_platform.post(entered_metadata)
         
         # Now find that metadata
-        results = self.ingester_platform.search(DatasetMetadataSearchCriteria(data_entry_1.dataset), 10)
+        results = self.ingester_platform.search(DatasetMetadataSearchCriteria(data_entry_1.dataset),0 , 10).results
         self.assertEqual(1, len(results))
 
 #       User changes sampling rate
@@ -376,7 +380,7 @@ class TestIngesterPersistence(unittest.TestCase):
         self.assertEqual(loc.elevation, loc1.elevation, "elevation does not match")
         self.assertEqual(loc.name, loc1.name, "name does not match")
         
-        locs = self.ingester_platform.search(LocationSearchCriteria(), 10)
+        locs = self.ingester_platform.search(LocationSearchCriteria(),0 , 10).results
         self.assertEquals(1, len(locs))
         
         # Now update the location
@@ -426,10 +430,10 @@ More"""
         datasets = self.ingester_platform.findDatasets(location=loc.id)
         self.assertEquals(1, len(datasets))
         
-        data_entry_schemas = self.ingester_platform.search(DataEntrySchemaSearchCriteria(), 10)
+        data_entry_schemas = self.ingester_platform.search(DataEntrySchemaSearchCriteria(),0 , 10).results
         self.assertEquals(1, len(data_entry_schemas))
 
-        datasets = self.ingester_platform.search(DatasetSearchCriteria(), 10)
+        datasets = self.ingester_platform.search(DatasetSearchCriteria(),0 , 10).results
         self.assertEquals(1, len(datasets))
         
     def test_schema_persistence(self):
