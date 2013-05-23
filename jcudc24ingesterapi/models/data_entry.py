@@ -57,6 +57,7 @@ class FileObject(object):
     
     mime_type = typed("_mime_type", str, "The mime type of the file")
     file_name = typed("_file_name", str, "The original file name")
+    f_path = typed("_file_path", str, "Path to the file")
     
     def __init__(self, f_path=None, f_handle=None, mime_type=None, file_name=None):
         self.f_handle = f_handle
