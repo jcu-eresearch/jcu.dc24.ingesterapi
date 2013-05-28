@@ -1,6 +1,5 @@
 
 
-
 import datetime
 import jcudc24ingesterapi
 import os
@@ -17,7 +16,7 @@ from jcudc24ingesterapi.models.data_entry import DataEntry, FileObject
 from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marshaller,\
     UnitOfWork
 from jcudc24ingesterapi.authentication import CredentialsAuthentication
-from jcudc24ingesterapi.models.metadata import DatasetMetadataEntry
+from jcudc24ingesterapi.models.metadata import DatasetMetadataEntry, DataEntryMetadataEntry
 from jcudc24ingesterapi.schemas.metadata_schemas import DataEntryMetadataSchema, DatasetMetadataSchema
 from jcudc24ingesterapi.models.sampling import PeriodicSampling #, CustomSampling, RepeatSampling
 from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, InvalidObjectError, UnknownObjectError, AuthenticationError,\
@@ -25,7 +24,7 @@ from jcudc24ingesterapi.ingester_exceptions import UnsupportedSchemaError, Inval
 from jcudc24ingesterapi.schemas.data_entry_schemas import DataEntrySchema
 from jcudc24ingesterapi.search import DataEntrySearchCriteria,\
     DatasetMetadataSearchCriteria, LocationSearchCriteria, DatasetSearchCriteria,\
-    DataEntrySchemaSearchCriteria
+    DataEntrySchemaSearchCriteria, DataEntryMetadataSearchCriteria
 
 class ProvisioningInterfaceTest(unittest.TestCase):
     """
@@ -298,6 +297,29 @@ class ProvisioningInterfaceTest(unittest.TestCase):
 
         self.assertTrue(called[0])
 
+    def test_data_entry_metadata(self):
+        schema = DataEntryMetadataSchema("test")
+        schema.addAttr(String("description"))
+        schema.addAttr(Double("value"))
+        self.ingester_api.post(schema)
+        calibration = DataEntryMetadataEntry(metadata_schema_id=int(schema.id), dataset_id=81)
+        calibration.object_id = 3648
+        calibration["description"] = "Test"
+        calibration["value"] = 1.2
+
+        calibration2 = DataEntryMetadataEntry(metadata_schema_id=int(schema.id), dataset_id=81)
+        calibration2.object_id = 3648
+        calibration2["description"] = "Test2"
+        calibration2["value"] = 2.3
+        saved_calibration = self.ingester_api.post(calibration2)
+
+        calibrations = self.ingester_api.search(DataEntryMetadataSearchCriteria(int(81), int(3648)), offset=0, limit=1000)
+        assert(len(calibrations.results) == 1)
+        assert(calibrations.results[0].schema_id == schema.id)
+
+        self.ingester_api.delete(calibration2)
+        self.ingester_api.delete(calibration)
+        self.ingester_api.delete(schema)
 
     def tearDown(self):
         self.ingester_platform.reset()

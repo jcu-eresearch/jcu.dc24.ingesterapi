@@ -15,7 +15,7 @@ class MetadataEntry(APIDomainObject):
     """
     id = typed("_id", int, "An identifier for the data entry")
     object_id = typed("_object_id", int, "An identifier for the object data entry")
-    metadata_schema = typed("_dataset", int, "The schema ID")
+    metadata_schema = typed("_schema", int, "The schema ID")
     data = typed("_data", dict, "Data storage")
 
     def __init__(self, object_id = None, metadata_schema_id=None, id = None, **kwargs):
@@ -39,5 +39,11 @@ class DatasetMetadataEntry(MetadataEntry):
     __xmlrpc_class__ = "dataset_metadata_entry"
 
 class DataEntryMetadataEntry(MetadataEntry):
+    dataset = typed("_dataset", int, "The dataset ID")
+
     __xmlrpc_class__ = "data_entry_metadata_entry"
+
+    def __init__(self, object_id = None, dataset_id=None, metadata_schema_id=None, id = None, **kwargs):
+        self.dataset_id = dataset_id
+        super(DataEntryMetadataEntry, self).__init__(object_id, metadata_schema_id, id, **kwargs)
     

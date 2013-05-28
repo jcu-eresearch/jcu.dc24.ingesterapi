@@ -264,6 +264,7 @@ class IngesterPlatformAPI(object):
         try:
             return self._marshaller.dict_to_obj(self.server.search(self._marshaller.obj_to_dict(criteria), offset, limit))
         except Exception, e:
+            logger.exception(e)
             raise translate_exception(e)
 
     def commit(self, unit):
