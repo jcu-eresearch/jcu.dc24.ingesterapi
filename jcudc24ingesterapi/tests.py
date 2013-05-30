@@ -1,4 +1,8 @@
 
+import sys
+import sqlalchemy
+
+
 
 import datetime
 import jcudc24ingesterapi
@@ -10,7 +14,7 @@ import tempfile
 
 from jcudc24ingesterapi.models.dataset import Dataset
 from jcudc24ingesterapi.models.locations import Location, Region, LocationOffset
-from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String
+from jcudc24ingesterapi.schemas.data_types import FileDataType, Double, String, DateTime
 from jcudc24ingesterapi.models.data_sources import PullDataSource, PushDataSource
 from jcudc24ingesterapi.models.data_entry import DataEntry, FileObject
 from jcudc24ingesterapi.ingester_platform_api import IngesterPlatformAPI, Marshaller,\
@@ -25,6 +29,77 @@ from jcudc24ingesterapi.schemas.data_entry_schemas import DataEntrySchema
 from jcudc24ingesterapi.search import DataEntrySearchCriteria,\
     DatasetMetadataSearchCriteria, LocationSearchCriteria, DatasetSearchCriteria,\
     DataEntrySchemaSearchCriteria, DataEntryMetadataSearchCriteria
+
+
+class SchemaTest(unittest.TestCase):
+    """
+    This test defines and checks that the Ingester API works the way the provisioning interface expects.
+    """
+    def setUp(self):
+        self.auth = CredentialsAuthentication("casey", "password")
+        self.ingester_platform = IngesterPlatformAPI("http://localhost:8080/api", self.auth)
+        self.schemas = []
+
+    def test_data_metadata(self):
+        work = self.ingester_platform.createUnitOfWork()
+        schema = DataEntryMetadataSchema("Quality Assurance")
+        schema.addAttr(Double("value"))
+        schema.addAttr(String("description"))
+        work.post(schema)
+        work.commit()
+        self.schemas.append(schema)
+
+        ingested_schema = self.ingester_platform.getSchema(schema.id)
+        assert(ingested_schema.attrs == schema.attrs)
+        assert(ingested_schema.name == schema.name)
+
+    def test_dataset_metadata(self):
+        work = self.ingester_platform.createUnitOfWork()
+        schema = DatasetMetadataSchema("Dataset Calibration")
+        schema.addAttr(DateTime("date"))
+        schema.addAttr(String("description"))
+        work.post(schema)
+        work.commit()
+        self.schemas.append(schema)
+
+        ingested_schema = self.ingester_platform.getSchema(schema.id)
+        assert(ingested_schema.attrs == schema.attrs)
+        assert(ingested_schema.name == schema.name)
+
+    def test_data(self):
+        work = self.ingester_platform.createUnitOfWork()
+        schema = DataEntrySchema("Test123")
+        schema.addAttr(Double("value"))
+        schema.addAttr(String("description"))
+        work.post(schema)
+        work.commit()
+        self.schemas.append(schema)
+
+        ingested_schema = self.ingester_platform.getSchema(schema.id)
+        assert(ingested_schema.attrs == schema.attrs)
+        assert(ingested_schema.name == schema.name)
+
+    def test_dup_data(self):
+        work = self.ingester_platform.createUnitOfWork()
+        schema = DataEntrySchema("Test123")
+        schema.addAttr(Double("value"))
+        schema.addAttr(String("description"))
+        work.post(schema)
+        work.commit()
+        self.schemas.append(schema)
+
+    def test_delete(self):
+        work = self.ingester_platform.createUnitOfWork()
+        for schema in self.schemas:
+            work.delete(schema)
+        work.commit()
+
+        for schema in self.schemas:
+            self.assertRaises(sqlalchemy.orm.exc.NoResultFound, self.ingester_platform.getSchema(schema.id))
+
+    def tearDown(self):
+        self.ingester_platform.close()
+
 
 class ProvisioningInterfaceTest(unittest.TestCase):
     """
@@ -528,6 +603,8 @@ class TestIngesterFunctionality(unittest.TestCase):
 
         dataset1a = self.ingester_platform.getDataset(dataset1.id)
         self.assertEquals(dataset1a.enabled, False)
+
+
 
     def tearDown(self):
         self.ingester_platform.reset()
