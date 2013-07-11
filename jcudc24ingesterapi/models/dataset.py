@@ -19,6 +19,7 @@ class Dataset(APIDomainObject):
     enabled = typed("_enabled", bool, "Dataset enabled")
     running = typed("_running", bool, "Dataset running")
     description = typed("_description", (str,unicode), "Description of dataset")
+    repository_id = typed("_repository_id", (str))
 
     def __init__(self, dataset_id=None, location=None, schema=None, data_source=None, redbox_uri=None, location_offset=None, enabled=False):
         self.id = dataset_id

@@ -40,6 +40,7 @@ class Location(APIDomainObject):
     longitude = typed("_longitude", float)
     elevation = typed("_elevation", (int,float))
     region = typed("_region", int, "ID of region")
+    repository_id = typed("_repository_id", (str))
 
     def __init__(self, latitude=None, longitude=None, location_name = None, elevation = None, region = None):
         """

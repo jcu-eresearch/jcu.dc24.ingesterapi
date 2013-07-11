@@ -48,6 +48,7 @@ class Schema(APIDomainObject):
     id = typed("_id", int)
     version = typed("_version", int)
     name = typed("_name", (str, unicode) )
+    repository_id = typed("_repository_id", (str))
 
     def __init__(self, name=None):
         self.name = name
