@@ -44,6 +44,6 @@ class DataEntryMetadataEntry(MetadataEntry):
     __xmlrpc_class__ = "data_entry_metadata_entry"
 
     def __init__(self, object_id = None, dataset_id=None, metadata_schema_id=None, id = None, **kwargs):
-        self.dataset_id = dataset_id
-        super(DataEntryMetadataEntry, self).__init__(object_id, metadata_schema_id, id, **kwargs)
+        super(DataEntryMetadataEntry, self).__init__(object_id=object_id, metadata_schema_id=metadata_schema_id, id=id, **kwargs)
+        self.dataset = dataset_id
     

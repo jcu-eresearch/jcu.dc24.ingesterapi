@@ -1,4 +1,6 @@
 from jcudc24ingesterapi import ValidationError
+import json
+
 __author__ = 'Casey Bajema'
 
 class IngestPlatformError(Exception):
@@ -41,15 +43,27 @@ class InvalidObjectError(IngestPlatformError):
     """
     __xmlrpc_error__ = 4
     def __init__(self, validation_errors):
+        if isinstance(validation_errors, str):
+            # Convert from JSON
+            validation_errors = json.loads(validation_errors)
+        
         if not isinstance(validation_errors, list):
             raise ValueError("Must pass a list of ValidationError objects")
-        for e in validation_errors:
-            if not isinstance(e, ValidationError):
+        for i in range(len(validation_errors)):
+            e = validation_errors[i]
+            if isinstance(e, ValidationError): continue
+            # Try to make this a validation error
+            if not isinstance(e, dict):
                 raise ValueError("Must pass a list of ValidationError objects")
+            validation_errors[i] = ValidationError(e["field"], e["message"], e["code"] if "code" in e else None)
+            
         self.errors = validation_errors
 
     def __str__(self):
         return "\n".join([str(e) for e in self.errors])
+
+    def json(self):
+        return json.dumps([{"field":e.field, "message":e.message, "code":e.code} for e in self.errors])
 
 class UnknownObjectError(IngestPlatformError):
     """

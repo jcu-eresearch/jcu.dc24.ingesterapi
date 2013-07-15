@@ -1,16 +1,8 @@
 
-import sys
-import sqlalchemy
-
-
-
 import datetime
 import jcudc24ingesterapi
-import os
 import os.path
 import unittest
-import sys
-import tempfile
 
 from jcudc24ingesterapi.models.dataset import Dataset
 from jcudc24ingesterapi.models.locations import Location, Region, LocationOffset
@@ -40,6 +32,21 @@ class SchemaTest(unittest.TestCase):
         self.ingester_platform = IngesterPlatformAPI("http://localhost:8080/api", self.auth)
         self.schemas = []
 
+    def compare_schema_attrs(self, attrs_src, attrs_dst):
+        # make a copy
+        attrs_dst = attrs_dst.copy()
+        
+        for attr in attrs_src:
+            found = False
+            for attr_dst in attrs_dst:
+                if attr in attrs_dst:
+                    del attrs_dst[attr]
+                    found = True
+                    break
+            self.assertTrue(found, "Attribute not found "+attr)
+        self.assertEquals(0, len(attrs_dst), "Extra attributes in destination")
+                    
+
     def test_data_metadata(self):
         work = self.ingester_platform.createUnitOfWork()
         schema = DataEntryMetadataSchema("Quality Assurance")
@@ -50,8 +57,8 @@ class SchemaTest(unittest.TestCase):
         self.schemas.append(schema)
 
         ingested_schema = self.ingester_platform.getSchema(schema.id)
-        assert(ingested_schema.attrs == schema.attrs)
-        assert(ingested_schema.name == schema.name)
+        self.compare_schema_attrs(ingested_schema.attrs, schema.attrs)
+        self.assertEquals(ingested_schema.name, schema.name)
 
     def test_dataset_metadata(self):
         work = self.ingester_platform.createUnitOfWork()
@@ -63,8 +70,8 @@ class SchemaTest(unittest.TestCase):
         self.schemas.append(schema)
 
         ingested_schema = self.ingester_platform.getSchema(schema.id)
-        assert(ingested_schema.attrs == schema.attrs)
-        assert(ingested_schema.name == schema.name)
+        self.compare_schema_attrs(ingested_schema.attrs, schema.attrs)
+        self.assertEquals(ingested_schema.name, schema.name)
 
     def test_data(self):
         work = self.ingester_platform.createUnitOfWork()
@@ -76,8 +83,8 @@ class SchemaTest(unittest.TestCase):
         self.schemas.append(schema)
 
         ingested_schema = self.ingester_platform.getSchema(schema.id)
-        assert(ingested_schema.attrs == schema.attrs)
-        assert(ingested_schema.name == schema.name)
+        self.compare_schema_attrs(ingested_schema.attrs, schema.attrs)
+        self.assertEquals(ingested_schema.name, schema.name)
 
     def test_dup_data(self):
         work = self.ingester_platform.createUnitOfWork()
@@ -95,7 +102,7 @@ class SchemaTest(unittest.TestCase):
         work.commit()
 
         for schema in self.schemas:
-            self.assertRaises(sqlalchemy.orm.exc.NoResultFound, self.ingester_platform.getSchema(schema.id))
+            self.assertIsNone(self.ingester_platform.getSchema(schema.id))
 
     def tearDown(self):
         self.ingester_platform.close()
@@ -243,6 +250,28 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         # Now find that metadata
         results = self.ingester_platform.search(DatasetMetadataSearchCriteria(data_entry_1.dataset),0 , 10).results
         self.assertEqual(1, len(results))
+        
+        
+        data_entry_md_schema = DataEntryMetadataSchema("test")
+        data_entry_md_schema.addAttr(String("description"))
+        data_entry_md_schema.addAttr(Double("value"))
+        data_entry_md_schema = self.ingester_platform.post(data_entry_md_schema)
+        calibration = DataEntryMetadataEntry(metadata_schema_id=int(data_entry_md_schema.id), dataset_id=dataset2.id, object_id=data_entry_3.id)
+        calibration["description"] = "Test"
+        calibration["value"] = 1.2
+
+        calibration2 = DataEntryMetadataEntry(metadata_schema_id=int(data_entry_md_schema.id), dataset_id=dataset2.id, object_id=data_entry_3.id)
+        calibration2["description"] = "Test2"
+        calibration2["value"] = 2.3
+        calibration2 = self.ingester_platform.post(calibration2)
+
+        calibrations = self.ingester_platform.search(DataEntryMetadataSearchCriteria(int(81), int(3648)), offset=0, limit=1000)
+        self.assertEquals(1, len(calibrations.results))
+        self.assertEquals(calibrations.results[0].schema_id, data_entry_md_schema.id)
+
+        self.ingester_platform.delete(calibration2)
+        self.ingester_platform.delete(calibration)
+        self.ingester_platform.delete(data_entry_md_schema)
 
 #       User changes sampling rate
 # FIXME: This test is going to be changed to be done by editing the dataset
@@ -371,30 +400,6 @@ class ProvisioningInterfaceTest(unittest.TestCase):
         work.commit()
 
         self.assertTrue(called[0])
-
-    def test_data_entry_metadata(self):
-        schema = DataEntryMetadataSchema("test")
-        schema.addAttr(String("description"))
-        schema.addAttr(Double("value"))
-        self.ingester_api.post(schema)
-        calibration = DataEntryMetadataEntry(metadata_schema_id=int(schema.id), dataset_id=81)
-        calibration.object_id = 3648
-        calibration["description"] = "Test"
-        calibration["value"] = 1.2
-
-        calibration2 = DataEntryMetadataEntry(metadata_schema_id=int(schema.id), dataset_id=81)
-        calibration2.object_id = 3648
-        calibration2["description"] = "Test2"
-        calibration2["value"] = 2.3
-        saved_calibration = self.ingester_api.post(calibration2)
-
-        calibrations = self.ingester_api.search(DataEntryMetadataSearchCriteria(int(81), int(3648)), offset=0, limit=1000)
-        assert(len(calibrations.results) == 1)
-        assert(calibrations.results[0].schema_id == schema.id)
-
-        self.ingester_api.delete(calibration2)
-        self.ingester_api.delete(calibration)
-        self.ingester_api.delete(schema)
 
     def tearDown(self):
         self.ingester_platform.reset()

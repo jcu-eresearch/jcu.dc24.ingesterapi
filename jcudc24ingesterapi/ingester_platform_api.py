@@ -163,7 +163,7 @@ def translate_exception(e):
         cls = getattr(ingester_exceptions, cls)
         if isinstance(cls, type) and hasattr(cls, "__xmlrpc_error__"):
             exception_factory[cls.__xmlrpc_error__] = cls
-    
+
     if e.faultCode in exception_factory:
         return exception_factory[e.faultCode](e.faultString)
     else:
