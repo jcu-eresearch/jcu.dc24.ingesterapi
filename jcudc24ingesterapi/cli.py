@@ -43,6 +43,48 @@ class CLIError(Exception):
     def __unicode__(self):
         return self.msg
 
+class CLIClient(object):
+
+    def __init__(self, server):
+        self.client = IngesterPlatformAPI(server, None)
+    
+    def file_or_json(self, s):
+        """Try to open the file or parse the string as JSON"""
+        obj = None
+        if os.path.exists(s):
+            with open(r, "r") as f:
+                obj = json.load(f)
+        else:
+            obj = json.loads(s)
+        return self.client._marshaller.dict_to_obj(obj)
+
+    def ping(self):
+        return self.client.ping()
+
+    def enable(self, ds_id):
+        return self.client.enableDataset(ds_id)
+
+    def disable(self, ds_id):
+        return self.client.disableDataset(ds_id)
+
+    def search(self, criteria):
+        return self.client._marshaller.obj_to_dict(self.client.search(self.file_or_json(criteria), 0, 10))
+
+    def events(self, ds_id):
+        return self.client.getIngesterEvents(ds_id)
+
+    def post(self, s):
+        obj = self.file_or_json(s)
+        return (self.client._marshaller.obj_to_dict(self.client.post(obj)))
+
+    def get(self, *args):
+        if args[0] == "schema":
+            return (self.client.getSchema(args[1])) 
+        elif args[0] == "location":
+            return (self.client.getLocation(args[1])) 
+        elif args[0] == "dataset":
+            return (self.client.getDataset(args[1])) 
+
 def main(argv=None): # IGNORE:C0111
     '''Command line options.'''
     
@@ -72,24 +114,13 @@ USAGE
         parser.add_argument("-v", "--verbose", dest="verbose", action="count", help="set verbosity level [default: %(default)s]")
         parser.add_argument('-V', '--version', action='version', version=program_version_message)
         parser.add_argument(dest="verb", help="the action being performed", metavar="verb", nargs=1)
-        parser.add_argument(dest="args", help="paths to folder(s) with source file(s) [default: %(default)s]", metavar="args", nargs='+')
+        parser.add_argument(dest="args", help="paths to folder(s) with source file(s) [default: %(default)s]", metavar="args", nargs='*')
         
         # Process arguments
         args = parser.parse_args()
         
-        client = IngesterPlatformAPI(args.server, None)
-        
-        if args.verb[0] == "get":
-            print "get"
-        elif args.verb[0] == "search":
-            pprint.pprint(client.search(args.args[0]))
-        elif args.verb[0] == "events":
-            pprint.pprint(client.getIngesterEvents(args.args[0]))
-        elif args.verb[0] == "post":
-            obj = json.loads(args.args[1])
-            obj["class"] = args.args[0]
-            pprint.pprint(client._marshaller.obj_to_dict(client.post(client._marshaller.dict_to_obj(obj))))
-
+        cli = CLIClient(args.server)
+        pprint.pprint(getattr(cli, args.verb[0])(*args.args))
         return 0
     except KeyboardInterrupt:
         ### handle keyboard interrupt ###

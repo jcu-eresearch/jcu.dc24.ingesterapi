@@ -56,7 +56,7 @@ class LocationSearchCriteria(APIDomainObject):
     """
     Data Entry search criteria object
     """
-    __xmlrpc_class__ = "dataset_search"
+    __xmlrpc_class__ = "location_search"
     
     location = typed("_location", int, "The location ID")
     
