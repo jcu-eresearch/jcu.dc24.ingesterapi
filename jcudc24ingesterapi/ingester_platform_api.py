@@ -272,6 +272,7 @@ class IngesterPlatformAPI(object):
         :param unit: Unit of work which is going to be committed
         :return: No return
         """
+        transaction_id = None
         try:
             to_upload = []
             unit_dto = self._marshaller.obj_to_dict(unit)
@@ -323,6 +324,7 @@ class IngesterPlatformAPI(object):
                 if obj.id not in lookup: continue
                 self._marshaller.dict_to_obj(lookup[obj.id], obj)
         except Exception, e:
+            logger.exception("Exception while committing " + `transaction_id`)
             raise translate_exception(e)
 
     def enableDataset(self, dataset_id):

@@ -62,8 +62,12 @@ class PushDataSource(_DataSource):
     """
     __xmlrpc_class__ = "push_data_source"
     path = typed("_path", (str,unicode), "Path to monitor for new files")
-    def __init__(self, path=None):
+    pattern = typed("_pattern", (str,unicode), "Pattern for identifying files, regex")
+    archive = typed("_path", (str,unicode), "Path where processed files are archived")
+    def __init__(self, path=None, pattern=None, archive=None):
         self.path = path
+        self.pattern = pattern
+        self.archive = archive
 
 
 class SOSScraperDataSource(_DataSource):
