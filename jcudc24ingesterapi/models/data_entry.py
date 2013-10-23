@@ -55,6 +55,7 @@ class FileObject(object):
     """
     __xmlrpc_class__ = "file_object"
     
+    f_path = typed("_f_path", str, "Internal filename")
     mime_type = typed("_mime_type", str, "The mime type of the file")
     file_name = typed("_file_name", str, "The original file name")
     

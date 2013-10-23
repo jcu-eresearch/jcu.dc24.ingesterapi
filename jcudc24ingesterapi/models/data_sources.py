@@ -63,12 +63,15 @@ class PushDataSource(_DataSource):
     __xmlrpc_class__ = "push_data_source"
     path = typed("_path", (str,unicode), "Path to monitor for new files")
     pattern = typed("_pattern", (str,unicode), "Pattern for identifying files, regex")
-    archive = typed("_path", (str,unicode), "Path where processed files are archived")
-    def __init__(self, path=None, pattern=None, archive=None):
+    archive = typed("_archive", (str,unicode), "Path where processed files are archived")
+    field = typed("_field", (str,unicode), "Field name to ingest into")
+    sampling = typed("_sampling", _Sampling, "Script to run to determine when to sample")
+    def __init__(self, path=None, pattern=None, archive=None, field=None, sampling=None):
         self.path = path
         self.pattern = pattern
         self.archive = archive
-
+        self.field = field
+        self.sampling = sampling
 
 class SOSScraperDataSource(_DataSource):
     __xmlrpc_class__ = "sos_scraper_data_source"
