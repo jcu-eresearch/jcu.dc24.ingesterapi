@@ -48,9 +48,11 @@ class DatasetSearchCriteria(APIDomainObject):
     __xmlrpc_class__ = "dataset_search"
     
     location = typed("_location", int, "The location ID")
+    schema = typed("_schema", int, "The schema ID")
     
-    def __init__(self, location=None):
+    def __init__(self, location=None, schema=None):
         self.location = location
+        self.schema = schema
         
 class LocationSearchCriteria(APIDomainObject):
     """
