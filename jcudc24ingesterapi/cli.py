@@ -67,11 +67,11 @@ class CLIClient(object):
     def disable(self, ds_id):
         return self.client.disableDataset(ds_id)
 
-    def search(self, criteria):
-        return self.client._marshaller.obj_to_dict(self.client.search(self.file_or_json(criteria), 0, 10))
+    def search(self, criteria, limit=20, offset=0):
+        return self.client._marshaller.obj_to_dict(self.client.search(self.file_or_json(criteria), offset, limit))
 
-    def events(self, ds_id):
-        return self.client.getIngesterEvents(ds_id)
+    def logs(self, ds_id):
+        return self.client._marshaller.obj_to_dict(self.client.getIngesterLogs(ds_id))
 
     def post(self, s):
         obj = self.file_or_json(s)
