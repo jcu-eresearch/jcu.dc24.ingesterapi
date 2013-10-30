@@ -68,7 +68,7 @@ class CLIClient(object):
         return self.client.disableDataset(ds_id)
 
     def search(self, criteria, limit=20, offset=0):
-        return self.client._marshaller.obj_to_dict(self.client.search(self.file_or_json(criteria), offset, limit))
+        return self.client._marshaller.obj_to_dict(self.client.search(self.file_or_json(criteria), int(offset), int(limit)))
 
     def logs(self, ds_id):
         return self.client._marshaller.obj_to_dict(self.client.getIngesterLogs(ds_id))
